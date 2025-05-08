@@ -822,296 +822,296 @@ if st.session_state.df is not None:
             st.info("Please load and process data in the EDA section first")
     # ... [Previous code until Advanced Visualizations section] ...
     
-# Advanced Visualizations Section
-elif st.session_state.current_tab == "📈 Advanced Visualizations":
-    # Define color scheme
-    COLOR_SCHEME = {
-        'B': '#2196F3', 'M': '#F44336',
-        'Benign': '#4CAF50', 'Malignant': '#2196F3',
-        '0': '#4CAF50', '1': '#2196F3'
-    }
-
-    if st.session_state.df is not None:
-        st.header("📊 Advanced Visualizations")
-        
-        # Create numeric dataframe
-        viz_df = st.session_state.df.select_dtypes(include=np.number)
-
-        # ================== Feature Engineering ==================
-        with st.expander("🧩 Feature Engineering", expanded=True):
-            st.subheader("Create New Features")
-            col1, col2 = st.columns(2)
+    # Advanced Visualizations Section
+    elif st.session_state.current_tab == "📈 Advanced Visualizations":
+        # Define color scheme
+        COLOR_SCHEME = {
+            'B': '#2196F3', 'M': '#F44336',
+            'Benign': '#4CAF50', 'Malignant': '#2196F3',
+            '0': '#4CAF50', '1': '#2196F3'
+        }
+    
+        if st.session_state.df is not None:
+            st.header("📊 Advanced Visualizations")
             
-            with col1:
-                num_feature1 = st.selectbox("First feature", viz_df.columns)
-                num_feature2 = st.selectbox("Second feature", viz_df.columns)
-                operation = st.selectbox("Operation", 
-                    ['Add', 'Subtract', 'Multiply', 'Divide', 'Ratio'])
-            
-            with col2:
-                new_feature_name = st.text_input("New feature name", "feature_new")
-                if st.button("💡 Create Feature"):
-                    try:
-                        if operation == 'Add':
-                            st.session_state.df[new_feature_name] = st.session_state.df[num_feature1] + st.session_state.df[num_feature2]
-                        elif operation == 'Subtract':
-                            st.session_state.df[new_feature_name] = st.session_state.df[num_feature1] - st.session_state.df[num_feature2]
-                        elif operation == 'Multiply':
-                            st.session_state.df[new_feature_name] = st.session_state.df[num_feature1] * st.session_state.df[num_feature2]
-                        elif operation == 'Divide':
-                            st.session_state.df[new_feature_name] = st.session_state.df[num_feature1] / (st.session_state.df[num_feature2] + 1e-6)
-                        elif operation == 'Ratio':
-                            st.session_state.df[new_feature_name] = st.session_state.df[num_feature1] / (st.session_state.df[num_feature2] + 1e-6)
-                        
-                        viz_df = st.session_state.df.select_dtypes(include=np.number)
-                        st.success(f"Created new feature: {new_feature_name}")
-                        st.experimental_rerun()
-                    except Exception as e:
-                        st.error(f"Error creating feature: {str(e)}")
-
-        # ================== Core Visualizations ==================
-        # Interactive Histogram
-        with st.expander("📊 Interactive Histogram", expanded=True):
-            col1, col2 = st.columns(2)
-            with col1:
-                hist_feature = st.selectbox("Histogram feature", viz_df.columns)
-                hist_group = st.selectbox("Histogram group by", 
-                    ["None", "diagnosis"] + st.session_state.df.select_dtypes(exclude=np.number).columns.tolist())
-            with col2:
-                hist_bins = st.slider("Bins", 5, 100, 30)
-                hist_height = st.slider("Height", 300, 800, 500)
-
-            fig_hist = px.histogram(
-                st.session_state.df,
-                x=hist_feature,
-                nbins=hist_bins,
-                color=None if hist_group == "None" else hist_group,
-                color_discrete_map=COLOR_SCHEME,
-                barmode='overlay',
-                height=hist_height,
-                title=f"Distribution of {hist_feature}"
-            )
-            st.plotly_chart(fig_hist, use_container_width=True)
-
-        # Interactive Box Plot
-        with st.expander("📦 Box Plot Analysis", expanded=True):
-            col1, col2 = st.columns(2)
-            with col1:
-                box_feature = st.selectbox("Boxplot feature", viz_df.columns)
-                box_group = st.selectbox("Boxplot group by", 
-                    ["diagnosis"] + st.session_state.df.select_dtypes(exclude=np.number).columns.tolist())
-            with col2:
-                box_log = st.checkbox("Logarithmic scale")
-                box_height = st.slider("Boxplot height", 300, 800, 500)
-
-            fig_box = px.box(
-                st.session_state.df,
-                x=box_group,
-                y=box_feature,
-                color=box_group,
-                color_discrete_map=COLOR_SCHEME,
-                log_y=box_log,
-                height=box_height,
-                title=f"{box_feature} Distribution by {box_group}"
-            )
-            st.plotly_chart(fig_box, use_container_width=True)
-
-        # Interactive Scatter Plot
-        with st.expander("🔘 Scatter Analysis", expanded=True):
-            col1, col2 = st.columns(2)
-            with col1:
-                x_feat = st.selectbox("X-axis", viz_df.columns)
-                y_feat = st.selectbox("Y-axis", viz_df.columns, index=1)
-            with col2:
-                color_feat = st.selectbox("Color by", 
-                    ["diagnosis"] + st.session_state.df.select_dtypes(exclude=np.number).columns.tolist())
-                size_feat = st.selectbox("Size by", [None] + viz_df.columns.tolist())
-
-            fig_scatter = px.scatter(
-                st.session_state.df,
-                x=x_feat,
-                y=y_feat,
-                color=color_feat,
-                size=size_feat,
-                color_discrete_map=COLOR_SCHEME,
-                hover_data=st.session_state.df.columns.tolist(),
-                height=600,
-                title=f"{y_feat} vs {x_feat}"
-            )
-            st.plotly_chart(fig_scatter, use_container_width=True)
-
-        # ================== Model Analysis ==================
-        with st.expander("🤖 Model Diagnostics", expanded=True):
-            # Ensure encoded diagnosis exists
-            if 'diagnosis_encoded' not in st.session_state.df.columns:
-                st.session_state.df['diagnosis_encoded'] = LabelEncoder()\
-                    .fit_transform(st.session_state.df['diagnosis'])
-            
-            # Visualization features
-            vis_features = ['radius_mean', 'texture_mean']
-            X_vis = st.session_state.df[vis_features].dropna()
-            y_vis = st.session_state.df['diagnosis_encoded'].loc[X_vis.index]
-
-            # Initialize models
-            if 'adv_models' not in st.session_state:
-                st.session_state.adv_models = {
-                    'Logistic Regression': LogisticRegression(max_iter=10000).fit(X_vis, y_vis),
-                    'Decision Tree': DecisionTreeClassifier(random_state=42).fit(X_vis, y_vis),
-                    'SVM': SVC(probability=True, kernel='linear').fit(X_vis, y_vis),
-                    'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42).fit(X_vis, y_vis)
-                }
-
-            col1, col2 = st.columns(2)
-            with col1:
-                # Model selection
-                selected_model = st.selectbox(
-                    "Select Model",
-                    options=list(st.session_state.adv_models.keys()),
-                    index=0
-                )
-
-                # Decision Boundary
-                st.subheader("Decision Boundary")
-                with st.spinner('Generating boundary...'):
-                    mdl = st.session_state.adv_models[selected_model]
-                    xx, yy = np.meshgrid(
-                        np.linspace(X_vis['radius_mean'].min(), X_vis['radius_mean'].max(), 100),
-                        np.linspace(X_vis['texture_mean'].min(), X_vis['texture_mean'].max(), 100)
-                    )
-                    grid_points = np.c_[xx.ravel(), yy.ravel()]
-                    grid_df = pd.DataFrame(grid_points, columns=vis_features)
-                    Z = mdl.predict(grid_df).reshape(xx.shape)
-
-                    db_fig = go.Figure()
-                    db_fig.add_trace(go.Contour(
-                        x=xx[0], y=yy[:,0], z=Z,
-                        showscale=False,
-                        colorscale='RdBu',
-                        opacity=0.3
-                    ))
-                    db_fig.add_trace(go.Scatter(
-                        x=X_vis['radius_mean'],
-                        y=X_vis['texture_mean'],
-                        mode='markers',
-                        marker=dict(color=y_vis, colorscale='Viridis'),
-                        name='Data Points'
-                    ))
-                    db_fig.update_layout(title=f'{selected_model} Decision Boundary')
-                    st.plotly_chart(db_fig, use_container_width=True)
-
-            with col2:
-                # SHAP Explanations
-                st.subheader("Model Explainability")
-                if st.button("Generate SHAP Values"):
-                    with st.spinner('Calculating SHAP...'):
+            # Create numeric dataframe
+            viz_df = st.session_state.df.select_dtypes(include=np.number)
+    
+            # ================== Feature Engineering ==================
+            with st.expander("🧩 Feature Engineering", expanded=True):
+                st.subheader("Create New Features")
+                col1, col2 = st.columns(2)
+                
+                with col1:
+                    num_feature1 = st.selectbox("First feature", viz_df.columns)
+                    num_feature2 = st.selectbox("Second feature", viz_df.columns)
+                    operation = st.selectbox("Operation", 
+                        ['Add', 'Subtract', 'Multiply', 'Divide', 'Ratio'])
+                
+                with col2:
+                    new_feature_name = st.text_input("New feature name", "feature_new")
+                    if st.button("💡 Create Feature"):
                         try:
-                            explainer = shap.Explainer(mdl, X_vis)
-                            shap_values = explainer(X_vis)
+                            if operation == 'Add':
+                                st.session_state.df[new_feature_name] = st.session_state.df[num_feature1] + st.session_state.df[num_feature2]
+                            elif operation == 'Subtract':
+                                st.session_state.df[new_feature_name] = st.session_state.df[num_feature1] - st.session_state.df[num_feature2]
+                            elif operation == 'Multiply':
+                                st.session_state.df[new_feature_name] = st.session_state.df[num_feature1] * st.session_state.df[num_feature2]
+                            elif operation == 'Divide':
+                                st.session_state.df[new_feature_name] = st.session_state.df[num_feature1] / (st.session_state.df[num_feature2] + 1e-6)
+                            elif operation == 'Ratio':
+                                st.session_state.df[new_feature_name] = st.session_state.df[num_feature1] / (st.session_state.df[num_feature2] + 1e-6)
                             
-                            fig_summary, ax = plt.subplots()
-                            shap.summary_plot(shap_values, X_vis, plot_type="bar", show=False)
-                            st.pyplot(fig_summary)
-                            
-                            st.subheader("Individual Explanation")
-                            sample_idx = st.slider("Sample Index", 0, len(X_vis)-1, 0)
-                            fig_force = shap.plots.force(shap_values[sample_idx], matplotlib=True, show=False)
-                            st.pyplot(fig_force)
+                            viz_df = st.session_state.df.select_dtypes(include=np.number)
+                            st.success(f"Created new feature: {new_feature_name}")
+                            st.experimental_rerun()
                         except Exception as e:
-                            st.error(f"SHAP error: {str(e)}")
-
-                # Threshold Tuning
-                st.subheader("Threshold Adjustment")
-                threshold = st.slider("Classification Threshold", 0.0, 1.0, 0.5, 0.01)
-                proba = mdl.predict_proba(X_vis)[:, 1]
-                adjusted_pred = (proba >= threshold).astype(int)
-                
-                metrics = {
-                    'Accuracy': accuracy_score(y_vis, adjusted_pred),
-                    'Precision': precision_score(y_vis, adjusted_pred),
-                    'Recall': recall_score(y_vis, adjusted_pred),
-                    'F1': f1_score(y_vis, adjusted_pred)
-                }
-                
-                st.write("#### Adjusted Metrics")
-                st.dataframe(pd.DataFrame([metrics]).T.style.background_gradient(cmap='Blues'))
-
-        # ================== Advanced Visualizations ==================
-        # Parallel Coordinates
-        with st.expander("📐 Multidimensional Analysis", expanded=True):
-            selected_dims = st.multiselect(
-                "Select dimensions",
-                viz_df.columns.tolist(),
-                default=viz_df.columns[:4].tolist()
-            )
-            
-            if len(selected_dims) >= 2:
-                fig = px.parallel_coordinates(
+                            st.error(f"Error creating feature: {str(e)}")
+    
+            # ================== Core Visualizations ==================
+            # Interactive Histogram
+            with st.expander("📊 Interactive Histogram", expanded=True):
+                col1, col2 = st.columns(2)
+                with col1:
+                    hist_feature = st.selectbox("Histogram feature", viz_df.columns)
+                    hist_group = st.selectbox("Histogram group by", 
+                        ["None", "diagnosis"] + st.session_state.df.select_dtypes(exclude=np.number).columns.tolist())
+                with col2:
+                    hist_bins = st.slider("Bins", 5, 100, 30)
+                    hist_height = st.slider("Height", 300, 800, 500)
+    
+                fig_hist = px.histogram(
                     st.session_state.df,
-                    color="diagnosis_encoded",
-                    dimensions=selected_dims + ['diagnosis_encoded'],
-                    color_continuous_scale=px.colors.diverging.Tealrose,
-                    labels={'diagnosis_encoded': 'Diagnosis'}
+                    x=hist_feature,
+                    nbins=hist_bins,
+                    color=None if hist_group == "None" else hist_group,
+                    color_discrete_map=COLOR_SCHEME,
+                    barmode='overlay',
+                    height=hist_height,
+                    title=f"Distribution of {hist_feature}"
                 )
-                st.plotly_chart(fig, use_container_width=True)
-            else:
-                st.warning("Select at least 2 dimensions")
-
-        # Network Graph
-        with st.expander("🌐 Feature Network", expanded=True):
-            corr_threshold = st.slider("Correlation Threshold", 0.0, 1.0, 0.7)
-            corr_matrix = viz_df.corr().abs()
-            edges = corr_matrix.stack().reset_index()
-            edges.columns = ['source', 'target', 'weight']
-            edges = edges[(edges['weight'] > corr_threshold) & (edges['source'] != edges['target'])]
-            
-            if not edges.empty:
-                G = nx.from_pandas_edgelist(edges, 'source', 'target', 'weight')
-                pos = nx.spring_layout(G)
+                st.plotly_chart(fig_hist, use_container_width=True)
+    
+            # Interactive Box Plot
+            with st.expander("📦 Box Plot Analysis", expanded=True):
+                col1, col2 = st.columns(2)
+                with col1:
+                    box_feature = st.selectbox("Boxplot feature", viz_df.columns)
+                    box_group = st.selectbox("Boxplot group by", 
+                        ["diagnosis"] + st.session_state.df.select_dtypes(exclude=np.number).columns.tolist())
+                with col2:
+                    box_log = st.checkbox("Logarithmic scale")
+                    box_height = st.slider("Boxplot height", 300, 800, 500)
+    
+                fig_box = px.box(
+                    st.session_state.df,
+                    x=box_group,
+                    y=box_feature,
+                    color=box_group,
+                    color_discrete_map=COLOR_SCHEME,
+                    log_y=box_log,
+                    height=box_height,
+                    title=f"{box_feature} Distribution by {box_group}"
+                )
+                st.plotly_chart(fig_box, use_container_width=True)
+    
+            # Interactive Scatter Plot
+            with st.expander("🔘 Scatter Analysis", expanded=True):
+                col1, col2 = st.columns(2)
+                with col1:
+                    x_feat = st.selectbox("X-axis", viz_df.columns)
+                    y_feat = st.selectbox("Y-axis", viz_df.columns, index=1)
+                with col2:
+                    color_feat = st.selectbox("Color by", 
+                        ["diagnosis"] + st.session_state.df.select_dtypes(exclude=np.number).columns.tolist())
+                    size_feat = st.selectbox("Size by", [None] + viz_df.columns.tolist())
+    
+                fig_scatter = px.scatter(
+                    st.session_state.df,
+                    x=x_feat,
+                    y=y_feat,
+                    color=color_feat,
+                    size=size_feat,
+                    color_discrete_map=COLOR_SCHEME,
+                    hover_data=st.session_state.df.columns.tolist(),
+                    height=600,
+                    title=f"{y_feat} vs {x_feat}"
+                )
+                st.plotly_chart(fig_scatter, use_container_width=True)
+    
+            # ================== Model Analysis ==================
+            with st.expander("🤖 Model Diagnostics", expanded=True):
+                # Ensure encoded diagnosis exists
+                if 'diagnosis_encoded' not in st.session_state.df.columns:
+                    st.session_state.df['diagnosis_encoded'] = LabelEncoder()\
+                        .fit_transform(st.session_state.df['diagnosis'])
                 
-                edge_trace = go.Scatter(
-                    x=[], y=[], line=dict(width=0.5, color='#888'), hoverinfo='none', mode='lines')
+                # Visualization features
+                vis_features = ['radius_mean', 'texture_mean']
+                X_vis = st.session_state.df[vis_features].dropna()
+                y_vis = st.session_state.df['diagnosis_encoded'].loc[X_vis.index]
+    
+                # Initialize models
+                if 'adv_models' not in st.session_state:
+                    st.session_state.adv_models = {
+                        'Logistic Regression': LogisticRegression(max_iter=10000).fit(X_vis, y_vis),
+                        'Decision Tree': DecisionTreeClassifier(random_state=42).fit(X_vis, y_vis),
+                        'SVM': SVC(probability=True, kernel='linear').fit(X_vis, y_vis),
+                        'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42).fit(X_vis, y_vis)
+                    }
+    
+                col1, col2 = st.columns(2)
+                with col1:
+                    # Model selection
+                    selected_model = st.selectbox(
+                        "Select Model",
+                        options=list(st.session_state.adv_models.keys()),
+                        index=0
+                    )
+    
+                    # Decision Boundary
+                    st.subheader("Decision Boundary")
+                    with st.spinner('Generating boundary...'):
+                        mdl = st.session_state.adv_models[selected_model]
+                        xx, yy = np.meshgrid(
+                            np.linspace(X_vis['radius_mean'].min(), X_vis['radius_mean'].max(), 100),
+                            np.linspace(X_vis['texture_mean'].min(), X_vis['texture_mean'].max(), 100)
+                        )
+                        grid_points = np.c_[xx.ravel(), yy.ravel()]
+                        grid_df = pd.DataFrame(grid_points, columns=vis_features)
+                        Z = mdl.predict(grid_df).reshape(xx.shape)
+    
+                        db_fig = go.Figure()
+                        db_fig.add_trace(go.Contour(
+                            x=xx[0], y=yy[:,0], z=Z,
+                            showscale=False,
+                            colorscale='RdBu',
+                            opacity=0.3
+                        ))
+                        db_fig.add_trace(go.Scatter(
+                            x=X_vis['radius_mean'],
+                            y=X_vis['texture_mean'],
+                            mode='markers',
+                            marker=dict(color=y_vis, colorscale='Viridis'),
+                            name='Data Points'
+                        ))
+                        db_fig.update_layout(title=f'{selected_model} Decision Boundary')
+                        st.plotly_chart(db_fig, use_container_width=True)
+    
+                with col2:
+                    # SHAP Explanations
+                    st.subheader("Model Explainability")
+                    if st.button("Generate SHAP Values"):
+                        with st.spinner('Calculating SHAP...'):
+                            try:
+                                explainer = shap.Explainer(mdl, X_vis)
+                                shap_values = explainer(X_vis)
+                                
+                                fig_summary, ax = plt.subplots()
+                                shap.summary_plot(shap_values, X_vis, plot_type="bar", show=False)
+                                st.pyplot(fig_summary)
+                                
+                                st.subheader("Individual Explanation")
+                                sample_idx = st.slider("Sample Index", 0, len(X_vis)-1, 0)
+                                fig_force = shap.plots.force(shap_values[sample_idx], matplotlib=True, show=False)
+                                st.pyplot(fig_force)
+                            except Exception as e:
+                                st.error(f"SHAP error: {str(e)}")
+    
+                    # Threshold Tuning
+                    st.subheader("Threshold Adjustment")
+                    threshold = st.slider("Classification Threshold", 0.0, 1.0, 0.5, 0.01)
+                    proba = mdl.predict_proba(X_vis)[:, 1]
+                    adjusted_pred = (proba >= threshold).astype(int)
+                    
+                    metrics = {
+                        'Accuracy': accuracy_score(y_vis, adjusted_pred),
+                        'Precision': precision_score(y_vis, adjusted_pred),
+                        'Recall': recall_score(y_vis, adjusted_pred),
+                        'F1': f1_score(y_vis, adjusted_pred)
+                    }
+                    
+                    st.write("#### Adjusted Metrics")
+                    st.dataframe(pd.DataFrame([metrics]).T.style.background_gradient(cmap='Blues'))
+    
+            # ================== Advanced Visualizations ==================
+            # Parallel Coordinates
+            with st.expander("📐 Multidimensional Analysis", expanded=True):
+                selected_dims = st.multiselect(
+                    "Select dimensions",
+                    viz_df.columns.tolist(),
+                    default=viz_df.columns[:4].tolist()
+                )
                 
-                for edge in G.edges():
-                    x0, y0 = pos[edge[0]]
-                    x1, y1 = pos[edge[1]]
-                    edge_trace['x'] += (x0, x1, None)
-                    edge_trace['y'] += (y0, y1, None)
+                if len(selected_dims) >= 2:
+                    fig = px.parallel_coordinates(
+                        st.session_state.df,
+                        color="diagnosis_encoded",
+                        dimensions=selected_dims + ['diagnosis_encoded'],
+                        color_continuous_scale=px.colors.diverging.Tealrose,
+                        labels={'diagnosis_encoded': 'Diagnosis'}
+                    )
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.warning("Select at least 2 dimensions")
+    
+            # Network Graph
+            with st.expander("🌐 Feature Network", expanded=True):
+                corr_threshold = st.slider("Correlation Threshold", 0.0, 1.0, 0.7)
+                corr_matrix = viz_df.corr().abs()
+                edges = corr_matrix.stack().reset_index()
+                edges.columns = ['source', 'target', 'weight']
+                edges = edges[(edges['weight'] > corr_threshold) & (edges['source'] != edges['target'])]
                 
-                node_trace = go.Scatter(
-                    x=[], y=[], mode='markers+text', text=[],
-                    marker=dict(showscale=True, colorscale='YlGnBu', size=10,
-                              color=[], line=dict(width=2)))
-                
-                for node in G.nodes():
-                    x, y = pos[node]
-                    node_trace['x'] += (x,)
-                    node_trace['y'] += (y,)
-                    node_trace['text'] += (node,)
-                
-                fig_network = go.Figure(data=[edge_trace, node_trace],
-                                      layout=go.Layout(showlegend=False, hovermode='closest'))
-                st.plotly_chart(fig_network, use_container_width=True)
-            else:
-                st.warning(f"No correlations above {corr_threshold}")
-
-        # Survival Analysis (if data available)
-        if all(col in st.session_state.df.columns for col in ['survival_months', 'survival_status']):
-            with st.expander("⏳ Survival Analysis", expanded=True):
-                kmf = KaplanMeierFitter()
-                plt.figure(figsize=(10, 6))
-                
-                for diagnosis in ['M', 'B']:
-                    mask = st.session_state.df['diagnosis'] == diagnosis
-                    kmf.fit(st.session_state.df[mask]['survival_months'],
-                           st.session_state.df[mask]['survival_status'],
-                           label=diagnosis)
-                    kmf.plot_survival_function()
-                
-                plt.title('Survival Probability by Diagnosis')
-                plt.ylabel('Probability')
-                plt.xlabel('Months')
-                st.pyplot(plt.gcf())
-                plt.clf()
-
-    else:
-        st.warning("Please load data in the EDA section first")
+                if not edges.empty:
+                    G = nx.from_pandas_edgelist(edges, 'source', 'target', 'weight')
+                    pos = nx.spring_layout(G)
+                    
+                    edge_trace = go.Scatter(
+                        x=[], y=[], line=dict(width=0.5, color='#888'), hoverinfo='none', mode='lines')
+                    
+                    for edge in G.edges():
+                        x0, y0 = pos[edge[0]]
+                        x1, y1 = pos[edge[1]]
+                        edge_trace['x'] += (x0, x1, None)
+                        edge_trace['y'] += (y0, y1, None)
+                    
+                    node_trace = go.Scatter(
+                        x=[], y=[], mode='markers+text', text=[],
+                        marker=dict(showscale=True, colorscale='YlGnBu', size=10,
+                                  color=[], line=dict(width=2)))
+                    
+                    for node in G.nodes():
+                        x, y = pos[node]
+                        node_trace['x'] += (x,)
+                        node_trace['y'] += (y,)
+                        node_trace['text'] += (node,)
+                    
+                    fig_network = go.Figure(data=[edge_trace, node_trace],
+                                          layout=go.Layout(showlegend=False, hovermode='closest'))
+                    st.plotly_chart(fig_network, use_container_width=True)
+                else:
+                    st.warning(f"No correlations above {corr_threshold}")
+    
+            # Survival Analysis (if data available)
+            if all(col in st.session_state.df.columns for col in ['survival_months', 'survival_status']):
+                with st.expander("⏳ Survival Analysis", expanded=True):
+                    kmf = KaplanMeierFitter()
+                    plt.figure(figsize=(10, 6))
+                    
+                    for diagnosis in ['M', 'B']:
+                        mask = st.session_state.df['diagnosis'] == diagnosis
+                        kmf.fit(st.session_state.df[mask]['survival_months'],
+                               st.session_state.df[mask]['survival_status'],
+                               label=diagnosis)
+                        kmf.plot_survival_function()
+                    
+                    plt.title('Survival Probability by Diagnosis')
+                    plt.ylabel('Probability')
+                    plt.xlabel('Months')
+                    st.pyplot(plt.gcf())
+                    plt.clf()
+    
+        else:
+            st.warning("Please load data in the EDA section first")
