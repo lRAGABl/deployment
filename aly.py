@@ -1210,16 +1210,28 @@ if st.session_state.df is not None:
                                 labels=dict(x='Recall', y='Precision')
                             )
                             st.plotly_chart(fig_pr, use_container_width=True)
+                    # In the Model Diagnostics section (tab4), add this before accessing diagnosis_encoded:
+                    if 'diagnosis_encoded' not in st.session_state.df.columns:
+                        st.session_state.df['diagnosis_encoded'] = LabelEncoder()\
+                            .fit_transform(st.session_state.df['diagnosis'])
                     
+                    # The corrected section should look like:
                     with tab4:
                         # Advanced Model Diagnostics
                         col1, col2 = st.columns(2)
                         with col1:
                             st.subheader("Decision Boundary")
+                            
+                            # Add diagnosis_encoded if missing
+                            if 'diagnosis_encoded' not in st.session_state.df.columns:
+                                st.session_state.df['diagnosis_encoded'] = LabelEncoder()\
+                                    .fit_transform(st.session_state.df['diagnosis'])
+                            
                             vis_features = ['radius_mean', 'texture_mean']
                             X_vis = st.session_state.df[vis_features].dropna()
                             y_vis = st.session_state.df['diagnosis_encoded'].loc[X_vis.index]
                             
+                            # Rest of the code...
                             mdl = st.session_state.models['Random Forest']
                             xx, yy = np.meshgrid(
                                 np.linspace(X_vis['radius_mean'].min(), X_vis['radius_mean'].max(), 100),
