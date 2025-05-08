@@ -1009,15 +1009,25 @@ if st.session_state.df is not None:
                     db_fig.update_layout(title=f'{selected_model} Decision Boundary')
                     st.plotly_chart(db_fig, use_container_width=True)
     
-                # Model Metrics
+             # Model Metrics
                 st.subheader("Performance Metrics")
-                pred = st.session_state.models[selected_model].predict(X)
+                
+                # Get visualization data
+                vis_features = ['radius_mean', 'texture_mean']
+                X_vis = st.session_state.df[vis_features].dropna()
+                y_vis = st.session_state.df['diagnosis_encoded'].loc[X_vis.index]
+                
+                # Get predictions using visualization-specific model and data
+                mdl = st.session_state.adv_models[selected_model]
+                pred = mdl.predict(X_vis)
+                
                 metrics = {
-                    'Accuracy': accuracy_score(y, pred),
-                    'Precision': precision_score(y, pred),
-                    'Recall': recall_score(y, pred),
-                    'F1 Score': f1_score(y, pred)
+                    'Accuracy': accuracy_score(y_vis, pred),
+                    'Precision': precision_score(y_vis, pred),
+                    'Recall': recall_score(y_vis, pred),
+                    'F1 Score': f1_score(y_vis, pred)
                 }
+                
                 metrics_fig = go.Figure(data=[
                     go.Bar(
                         x=list(metrics.keys()),
