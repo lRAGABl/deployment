@@ -837,7 +837,6 @@ if st.session_state.df is not None:
             '1': '#2196F3'   # For numeric encoded malignant
         }
     
-        # Advanced Visualization Tab
         if st.session_state.df is not None:
             st.header("📊 Advanced Visualizations")
             
@@ -1108,36 +1107,182 @@ if st.session_state.df is not None:
             
             # ================== Model Evaluation ==================
             with st.expander("🤖 Model Diagnostics & Evaluation", expanded=True):
-                # Model Evaluation Tabs
                 if 'models' in st.session_state and 'X_test' in st.session_state and 'Y_test' in st.session_state:
                     st.subheader("Model Performance on Test Set")
                     tab1, tab2, tab3, tab4 = st.tabs(["Confusion Matrices", "Performance Metrics", "Detailed Report", "Advanced Diagnostics"])
                     
                     with tab1:
-                        # ... (keep original confusion matrix code from first snippet)
+                        st.markdown("### Test Set Confusion Matrices")
+                        selected_model = st.selectbox(
+                            "Select model to view",
+                            options=list(st.session_state.models.keys()),
+                            index=0,
+                            key="model_select_confusion"
+                        )
+                        
+                        model = st.session_state.models[selected_model]
+                        y_pred = model.predict(st.session_state.X_test)
+                        cm = confusion_matrix(st.session_state.Y_test, y_pred)
+                        
+                        fig = px.imshow(
+                            cm,
+                            labels=dict(x="Predicted", y="Actual", color="Count"),
+                            x=['Benign', 'Malignant'],
+                            y=['Benign', 'Malignant'],
+                            text_auto=True,
+                            color_continuous_scale='Blues',
+                            aspect="auto",
+                            height=400
+                        )
+                        fig.update_layout(title=f"{selected_model} - Test Set Performance")
+                        st.plotly_chart(fig, use_container_width=True)
+                        st.caption("**Interpretation**: Rows show true labels, columns show predictions.")
                     
                     with tab2:
-                        # ... (keep original performance metrics code from first snippet)
+                        st.markdown("### Test Set Metrics Comparison")
+                        metrics = []
+                        for name, model in st.session_state.models.items():
+                            y_pred = model.predict(st.session_state.X_test)
+                            probas = model.predict_proba(st.session_state.X_test)[:,1]
+                            metrics.append({
+                                'Model': name,
+                                'Accuracy': accuracy_score(st.session_state.Y_test, y_pred),
+                                'Precision': precision_score(st.session_state.Y_test, y_pred),
+                                'Recall': recall_score(st.session_state.Y_test, y_pred),
+                                'F1 Score': f1_score(st.session_state.Y_test, y_pred),
+                                'AUC-ROC': roc_auc_score(st.session_state.Y_test, probas)
+                            })
+                        
+                        metrics_df = pd.DataFrame(metrics).set_index('Model')
+                        st.dataframe(metrics_df.style.format("{:.3f}"))
                     
                     with tab3:
-                        # ... (keep original detailed report code from first snippet)
-                    
-                    with tab4:
-                        # Advanced Model Diagnostics from second snippet
+                        model_select = st.selectbox(
+                            "Select model for detailed report",
+                            options=list(st.session_state.models.keys()),
+                            index=0,
+                            key="model_select_detailed"
+                        )
+                        
+                        model = st.session_state.models[model_select]
+                        y_pred = model.predict(st.session_state.X_test)
+                        y_proba = model.predict_proba(st.session_state.X_test)[:,1]
+                        
                         col1, col2 = st.columns(2)
                         with col1:
-                            # Decision Boundary Visualization
-                            # ... (include decision boundary code from second snippet)
+                            st.markdown("#### Classification Report")
+                            report = classification_report(
+                                st.session_state.Y_test, y_pred,
+                                target_names=["Benign", "Malignant"],
+                                output_dict=True
+                            )
+                            st.dataframe(pd.DataFrame(report).transpose().style.format("{:.4f}"))
                         
                         with col2:
-                            # SHAP Explanations
-                            # ... (include SHAP code from second snippet)
-                
-                # Threshold Tuning and Survival Analysis
-                # ... (include threshold tuning and survival analysis code from second snippet)
+                            st.markdown("#### Key Metrics")
+                            metrics = {
+                                'Accuracy': accuracy_score(st.session_state.Y_test, y_pred),
+                                'Precision': precision_score(st.session_state.Y_test, y_pred),
+                                'Recall': recall_score(st.session_state.Y_test, y_pred),
+                                'F1 Score': f1_score(st.session_state.Y_test, y_pred),
+                                'ROC AUC': roc_auc_score(st.session_state.Y_test, y_proba)
+                            }
+                            st.json(metrics)
+                        
+                        st.markdown("#### ROC & Precision-Recall Curves")
+                        tab_roc, tab_pr = st.tabs(["ROC Curve", "Precision-Recall"])
+                        
+                        with tab_roc:
+                            fpr, tpr, _ = roc_curve(st.session_state.Y_test, y_proba)
+                            fig_roc = px.area(
+                                x=fpr, y=tpr,
+                                title=f'ROC Curve (AUC = {metrics["ROC AUC"]:.4f})',
+                                labels=dict(x='False Positive Rate', y='True Positive Rate')
+                            )
+                            fig_roc.add_shape(type='line', line=dict(dash='dash'), x0=0, x1=1, y0=0, y1=1)
+                            st.plotly_chart(fig_roc, use_container_width=True)
+                        
+                        with tab_pr:
+                            precision, recall, _ = precision_recall_curve(st.session_state.Y_test, y_proba)
+                            fig_pr = px.area(
+                                x=recall, y=precision,
+                                title=f'Precision-Recall Curve (AP = {average_precision_score(st.session_state.Y_test, y_proba):.4f})',
+                                labels=dict(x='Recall', y='Precision')
+                            )
+                            st.plotly_chart(fig_pr, use_container_width=True)
+                    
+                    with tab4:
+                        # Advanced Model Diagnostics
+                        col1, col2 = st.columns(2)
+                        with col1:
+                            st.subheader("Decision Boundary")
+                            vis_features = ['radius_mean', 'texture_mean']
+                            X_vis = st.session_state.df[vis_features].dropna()
+                            y_vis = st.session_state.df['diagnosis_encoded'].loc[X_vis.index]
+                            
+                            mdl = st.session_state.models['Random Forest']
+                            xx, yy = np.meshgrid(
+                                np.linspace(X_vis['radius_mean'].min(), X_vis['radius_mean'].max(), 100),
+                                np.linspace(X_vis['texture_mean'].min(), X_vis['texture_mean'].max(), 100)
+                            )
+                            grid_points = np.c_[xx.ravel(), yy.ravel()]
+                            grid_df = pd.DataFrame(grid_points, columns=vis_features)
+                            Z = mdl.predict(grid_df).reshape(xx.shape)
+                            
+                            db_fig = go.Figure()
+                            db_fig.add_trace(go.Contour(
+                                x=xx[0], y=yy[:,0], z=Z,
+                                showscale=False,
+                                colorscale='RdBu',
+                                opacity=0.3
+                            ))
+                            db_fig.add_trace(go.Scatter(
+                                x=X_vis['radius_mean'],
+                                y=X_vis['texture_mean'],
+                                mode='markers',
+                                marker=dict(color=y_vis, colorscale='Viridis'),
+                                name='Data Points'
+                            ))
+                            db_fig.update_layout(title='Decision Boundary')
+                            st.plotly_chart(db_fig, use_container_width=True)
+                        
+                        with col2:
+                            st.subheader("SHAP Explanations")
+                            if st.button("Generate SHAP Values"):
+                                with st.spinner('Calculating SHAP...'):
+                                    try:
+                                        explainer = shap.Explainer(mdl, X_vis)
+                                        shap_values = explainer(X_vis)
+                                        
+                                        fig_summary, ax = plt.subplots()
+                                        shap.summary_plot(shap_values, X_vis, plot_type="bar", show=False)
+                                        st.pyplot(fig_summary)
+                                        
+                                        st.subheader("Individual Explanation")
+                                        sample_idx = st.slider("Sample Index", 0, len(X_vis)-1, 0)
+                                        fig_force = shap.plots.force(shap_values[sample_idx], matplotlib=True, show=False)
+                                        st.pyplot(fig_force)
+                                    except Exception as e:
+                                        st.error(f"SHAP error: {str(e)}")
+    
+                            st.subheader("Threshold Tuning")
+                            threshold = st.slider("Classification Threshold", 0.0, 1.0, 0.5, 0.01)
+                            proba = mdl.predict_proba(X_vis)[:, 1]
+                            adjusted_pred = (proba >= threshold).astype(int)
+                            
+                            metrics = {
+                                'Accuracy': accuracy_score(y_vis, adjusted_pred),
+                                'Precision': precision_score(y_vis, adjusted_pred),
+                                'Recall': recall_score(y_vis, adjusted_pred),
+                                'F1': f1_score(y_vis, adjusted_pred)
+                            }
+                            st.dataframe(pd.DataFrame([metrics]).T.style.background_gradient(cmap='Blues'))
+    
+                else:
+                    st.warning("Please train models first in the ML Modeling tab to see evaluation metrics")
     
             # ================== Additional Visualizations ==================
-            # Section 6: Interactive Correlation Heatmap
+            # Section 5: Parallel Coordinates
             with st.expander("📐 Multidimensional Analysis", expanded=True):
                 selected_dims = st.multiselect(
                     "Select dimensions",
@@ -1146,6 +1291,10 @@ if st.session_state.df is not None:
                 )
                 
                 if len(selected_dims) >= 2:
+                    if 'diagnosis_encoded' not in st.session_state.df.columns:
+                        st.session_state.df['diagnosis_encoded'] = LabelEncoder()\
+                            .fit_transform(st.session_state.df['diagnosis'])
+                    
                     fig = px.parallel_coordinates(
                         st.session_state.df,
                         color="diagnosis_encoded",
@@ -1157,13 +1306,36 @@ if st.session_state.df is not None:
                 else:
                     st.warning("Select at least 2 dimensions")
     
-            # Section 7: Feature Optimization
+            # Section 6: Feature Optimization
             with st.expander("🔧 Feature Optimization", expanded=True):
                 if st.checkbox("Show feature importance analysis"):
                     if 'models' in st.session_state:
-                        # ... (keep feature importance code from first snippet)
-                
-            # Section 8: Interactive Correlation Heatmap
+                        rf_model = st.session_state.models['Random Forest']
+                        importances = rf_model.feature_importances_
+                        indices = np.argsort(importances)[::-1]
+                        
+                        fig_imp = px.bar(
+                            x=np.array(st.session_state.selected_features)[indices],
+                            y=importances[indices],
+                            labels={'x': 'Features', 'y': 'Importance'},
+                            title="Random Forest Feature Importance",
+                            height=500,
+                            color=np.array(st.session_state.selected_features)[indices],
+                            color_discrete_sequence=['#2196F3']*len(indices)
+                        fig_imp.update_layout(showlegend=False)
+                        st.plotly_chart(fig_imp, use_container_width=True)
+                        
+                        threshold = st.slider("Importance threshold", 0.0, 0.5, 0.05, 0.01)
+                        important_features = [st.session_state.selected_features[i] 
+                                            for i in indices if importances[i] > threshold]
+                        
+                        st.info(f"✅ Suggested features to keep: {', '.join(important_features)}")
+                        if len(important_features) < len(st.session_state.selected_features):
+                            st.warning(f"❌ Consider dropping: {', '.join([f for f in st.session_state.selected_features if f not in important_features])}")
+                    else:
+                        st.warning("Train models first to see feature importance")
+    
+            # Section 7: Interactive Correlation Heatmap
             with st.expander("🔥 Correlation Heatmap", expanded=True):
                 heatmap_col1, heatmap_col2 = st.columns(2)
                 
@@ -1199,6 +1371,25 @@ if st.session_state.df is not None:
                                         texttemplate="%{text}")
                 
                 st.plotly_chart(fig_heat, use_container_width=True)
+    
+            # Section 8: Survival Analysis
+            if all(col in st.session_state.df.columns for col in ['survival_months', 'survival_status']):
+                with st.expander("⏳ Survival Analysis", expanded=True):
+                    kmf = KaplanMeierFitter()
+                    plt.figure(figsize=(10, 6))
+                    
+                    for diagnosis in ['M', 'B']:
+                        mask = st.session_state.df['diagnosis'] == diagnosis
+                        kmf.fit(st.session_state.df[mask]['survival_months'],
+                               st.session_state.df[mask]['survival_status'],
+                               label=diagnosis)
+                        kmf.plot_survival_function()
+                    
+                    plt.title('Survival Probability by Diagnosis')
+                    plt.ylabel('Probability')
+                    plt.xlabel('Months')
+                    st.pyplot(plt.gcf())
+                    plt.clf()
     
         else:
             st.info("Please load data in the EDA section first")
