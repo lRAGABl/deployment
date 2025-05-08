@@ -27,6 +27,9 @@ import plotly.graph_objects as go
 import plotly.figure_factory as ff
 import base64
 import time
+import shap
+from lifelines import KaplanMeierFitter
+from sklearn.preprocessing import LabelEncoder  # Add this at the top of your file
 
 # Configure the app
 st.set_page_config(layout="wide", page_title="Breast Cancer Analysis")
