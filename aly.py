@@ -836,167 +836,162 @@ elif st.session_state.current_tab == "📈 Advanced Visualizations":
     if st.session_state.df is not None:
         st.header("📊 Advanced Visualizations")
         
-        # Create a clean numeric dataframe for visualizations
+        # Create numeric dataframe
         viz_df = st.session_state.df.select_dtypes(include=np.number)
         
         # Section 1: Interactive Histogram
-        st.subheader("1. Interactive Histogram")
-        hist_col1, hist_col2 = st.columns(2)
-        
-        with hist_col1:
-            hist_feature = st.selectbox(
-                "Select feature for histogram",
-                options=viz_df.columns,
-                index=0
-            )
-            hist_group = st.selectbox(
-                "Group by (histogram)",
-                ["None", "diagnosis"] + st.session_state.df.select_dtypes(exclude=np.number).columns.tolist(),
-                index=0
-            )
-        
-        with hist_col2:
-            hist_bins = st.slider("Number of bins", 5, 100, 30)
-            hist_height = st.slider("Histogram height", 300, 800, 500)
-        
-        if hist_group == "None":
+        with st.expander("📊 Interactive Histogram", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                hist_feature = st.selectbox(
+                    "Select feature for histogram",
+                    options=viz_df.columns,
+                    index=0
+                )
+                hist_group = st.selectbox(
+                    "Group by",
+                    ["None", "diagnosis"] + st.session_state.df.select_dtypes(exclude=np.number).columns.tolist(),
+                    index=0
+                )
+            with col2:
+                hist_bins = st.slider("Number of bins", 5, 100, 30)
+                hist_height = st.slider("Chart height", 300, 800, 500)
+
             fig_hist = px.histogram(
                 st.session_state.df,
                 x=hist_feature,
                 nbins=hist_bins,
-                height=hist_height,
-                title=f"Distribution of {hist_feature}"
-            )
-        else:
-            fig_hist = px.histogram(
-                st.session_state.df,
-                x=hist_feature,
-                color=hist_group,
-                nbins=hist_bins,
+                color=None if hist_group == "None" else hist_group,
                 color_discrete_map=COLOR_SCHEME,
                 barmode='overlay',
                 opacity=0.7,
                 height=hist_height,
-                title=f"Distribution of {hist_feature} by {hist_group}"
+                title=f"Distribution of {hist_feature}"
             )
-        st.plotly_chart(fig_hist, use_container_width=True)
-        
+            st.plotly_chart(fig_hist, use_container_width=True)
+
         # Section 2: Interactive Box Plot
-        st.subheader("2. Interactive Box Plot")
-        box_col1, box_col2 = st.columns(2)
-        
-        with box_col1:
-            box_feature = st.selectbox(
-                "Select feature for box plot",
-                options=viz_df.columns,
-                index=0
+        with st.expander("📦 Interactive Box Plot", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                box_feature = st.selectbox(
+                    "Select feature for box plot",
+                    options=viz_df.columns,
+                    index=0
+                )
+                box_by = st.selectbox(
+                    "Group by",
+                    ["diagnosis"] + st.session_state.df.select_dtypes(exclude=np.number).columns.tolist(),
+                    index=0
+                )
+            with col2:
+                box_log = st.checkbox("Log scale", value=False)
+                box_height = st.slider("Box plot height", 300, 800, 500)
+
+            fig_box = px.box(
+                st.session_state.df,
+                x=box_by,
+                y=box_feature,
+                color=box_by,
+                color_discrete_map=COLOR_SCHEME,
+                log_y=box_log,
+                height=box_height,
+                title=f"Distribution of {box_feature} by {box_by}"
             )
-            box_by = st.selectbox(
-                "Group by",
-                ["diagnosis"] + st.session_state.df.select_dtypes(exclude=np.number).columns.tolist(),
-                index=0
-            )
-        
-        with box_col2:
-            box_log = st.checkbox("Log scale", value=False)
-            box_height = st.slider("Box plot height", 300, 800, 500)
-        
-        fig_box = px.box(
-            st.session_state.df,
-            x=box_by,
-            y=box_feature,
-            color=box_by,
-            color_discrete_map=COLOR_SCHEME,
-            log_y=box_log,
-            height=box_height,
-            title=f"Distribution of {box_feature} {'by ' + box_by if box_by else ''}"
-        )
-        st.plotly_chart(fig_box, use_container_width=True)
-        
+            st.plotly_chart(fig_box, use_container_width=True)
+
         # Section 3: Interactive Scatter Plot
-        st.subheader("3. Interactive Scatter Plot")
-        scatter_col1, scatter_col2 = st.columns(2)
-        
-        with scatter_col1:
-            x_feature = st.selectbox(
-                "X-axis feature",
-                options=viz_df.columns,
-                index=0
-            )
-            y_feature = st.selectbox(
-                "Y-axis feature",
-                options=viz_df.columns,
-                index=1
-            )
-        
-        with scatter_col2:
-            color_by = st.selectbox(
-                "Color by",
-                ["diagnosis"] + st.session_state.df.select_dtypes(exclude=np.number).columns.tolist(),
-                index=0
-            )
-            size_by = st.selectbox(
-                "Size by (optional)",
-                [None] + viz_df.columns.tolist(),
-                index=0
-            )
+        with st.expander("🔘 Interactive Scatter Plot", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                x_feature = st.selectbox(
+                    "X-axis feature",
+                    options=viz_df.columns,
+                    index=0
+                )
+                y_feature = st.selectbox(
+                    "Y-axis feature", 
+                    options=viz_df.columns,
+                    index=1
+                )
+            with col2:
+                color_by = st.selectbox(
+                    "Color by",
+                    ["diagnosis"] + st.session_state.df.select_dtypes(exclude=np.number).columns.tolist(),
+                    index=0
+                )
+                size_by = st.selectbox(
+                    "Size by",
+                    [None] + viz_df.columns.tolist(),
+                    index=0
+                )
 
-        # Initialize models if not exists
-        if 'diagnosis_encoded' not in st.session_state.df.columns:
-            st.session_state.df['diagnosis_encoded'] = LabelEncoder().fit_transform(st.session_state.df['diagnosis'])
-        
-        # Prepare model training data
-        feature_x = 'radius_mean'
-        feature_y = 'texture_mean'
-        X = st.session_state.df[[feature_x, feature_y]].dropna()
-        y = st.session_state.df['diagnosis_encoded'].loc[X.index]
-        
-        if 'models' not in st.session_state or not st.session_state.models:
-            st.session_state.models = {
-                'Logistic Regression': LogisticRegression(max_iter=10000).fit(X, y),
-                'Decision Tree': DecisionTreeClassifier(random_state=42).fit(X, y),
-                'SVM': SVC(probability=True, kernel='linear').fit(X, y),
-                'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42).fit(X, y)
-            }
-
-        # Model selection
-        selected_model = st.radio(
-            "Select Model for Analysis:",
-            options=list(st.session_state.models.keys()),
-            index=0,
-            horizontal=True
-        )
-        
-        # Decision Boundary Visualization
-        st.header("Model Decision Boundary")
-        with st.spinner('Generating decision boundary...'):
-            mdl = st.session_state.models[selected_model]
-            xx, yy = np.meshgrid(
-                np.linspace(X[feature_x].min(), X[feature_x].max(), 100),
-                np.linspace(X[feature_y].min(), X[feature_y].max(), 100)
+            fig_scatter = px.scatter(
+                st.session_state.df,
+                x=x_feature,
+                y=y_feature,
+                color=color_by,
+                size=size_by,
+                color_discrete_map=COLOR_SCHEME,
+                hover_data=st.session_state.df.columns.tolist(),
+                height=600,
+                title=f"{y_feature} vs {x_feature}"
             )
-            Z = mdl.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
+            st.plotly_chart(fig_scatter, use_container_width=True)
+
+        # Section 4: Model Analysis
+        with st.expander("🤖 Model Analysis", expanded=True):
+            # Initialize models
+            if 'diagnosis_encoded' not in st.session_state.df.columns:
+                st.session_state.df['diagnosis_encoded'] = LabelEncoder().fit_transform(st.session_state.df['diagnosis'])
             
-            db_fig = go.Figure()
-            db_fig.add_trace(go.Contour(
-                x=xx[0], y=yy[:,0], z=Z,
-                showscale=False, 
-                colorscale='RdBu', 
-                opacity=0.3
-            ))
-            db_fig.add_trace(go.Scatter(
-                x=X[feature_x], 
-                y=X[feature_y],
-                mode='markers',
-                marker=dict(color=y, colorscale='Viridis'),
-                name='Data Points'
-            ))
-            db_fig.update_layout(title=f'{selected_model} Decision Boundary')
-            st.plotly_chart(db_fig, use_container_width=True)
-        
-        # Model Metrics Visualization
-        st.header("Model Performance Metrics")
-        with st.spinner('Calculating metrics...'):
+            X = st.session_state.df[['radius_mean', 'texture_mean']].dropna()
+            y = st.session_state.df['diagnosis_encoded'].loc[X.index]
+            
+            if 'models' not in st.session_state:
+                st.session_state.models = {
+                    'Logistic Regression': LogisticRegression(max_iter=10000).fit(X, y),
+                    'Decision Tree': DecisionTreeClassifier(random_state=42).fit(X, y),
+                    'SVM': SVC(probability=True, kernel='linear').fit(X, y),
+                    'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42).fit(X, y)
+                }
+
+            # Model selection
+            selected_model = st.selectbox(
+                "Select Model",
+                options=list(st.session_state.models.keys()),
+                index=0
+            )
+
+            # Decision Boundary Plot
+            st.subheader("Decision Boundary")
+            with st.spinner('Generating decision boundary...'):
+                mdl = st.session_state.models[selected_model]
+                xx, yy = np.meshgrid(
+                    np.linspace(X['radius_mean'].min(), X['radius_mean'].max(), 100),
+                    np.linspace(X['texture_mean'].min(), X['texture_mean'].max(), 100)
+                )
+                Z = mdl.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
+                
+                db_fig = go.Figure()
+                db_fig.add_trace(go.Contour(
+                    x=xx[0], y=yy[:,0], z=Z,
+                    showscale=False,
+                    colorscale='RdBu',
+                    opacity=0.3
+                ))
+                db_fig.add_trace(go.Scatter(
+                    x=X['radius_mean'],
+                    y=X['texture_mean'],
+                    mode='markers',
+                    marker=dict(color=y, colorscale='Viridis'),
+                    name='Data Points'
+                ))
+                db_fig.update_layout(title=f'{selected_model} Decision Boundary')
+                st.plotly_chart(db_fig, use_container_width=True)
+
+            # Model Metrics
+            st.subheader("Performance Metrics")
             pred = st.session_state.models[selected_model].predict(X)
             metrics = {
                 'Accuracy': accuracy_score(y, pred),
@@ -1008,81 +1003,115 @@ elif st.session_state.current_tab == "📈 Advanced Visualizations":
                 go.Bar(
                     x=list(metrics.keys()),
                     y=list(metrics.values()),
-                    marker_color=['blue','green','red','orange']
+                    marker_color=['#2196F3', '#4CAF50', '#F44336', '#FF9800']
                 )
             ])
-            metrics_fig.update_layout(
-                title=f'{selected_model} Metrics',
-                yaxis=dict(range=[0,1])
-            )
+            metrics_fig.update_layout(yaxis_range=[0,1])
             st.plotly_chart(metrics_fig, use_container_width=True)
-        
-        # ROC Curve Visualization
-        st.header("ROC Curves Comparison")
-        with st.spinner('Generating ROC curves...'):
-            roc_fig = go.Figure()
-            colors = ['blue','green','red','orange']
-            for (name, model), color in zip(st.session_state.models.items(), colors):
-                if hasattr(model, 'predict_proba'):
-                    scores = model.predict_proba(X)[:,1]
-                else:
-                    scores = model.decision_function(X)
-                fpr, tpr, _ = roc_curve(y, scores)
-                roc_auc = auc(fpr, tpr)
-                roc_fig.add_trace(go.Scatter(
-                    x=fpr, y=tpr,
-                    mode='lines',
-                    name=f'{name} (AUC = {roc_auc:.2f})',
-                    line=dict(color=color)
-                ))
-            roc_fig.add_trace(go.Scatter(
-                x=[0,1], y=[0,1],
-                mode='lines',
-                line=dict(dash='dash', color='gray'),
-                name='Random Chance'
-            ))
-            roc_fig.update_layout(
-                title='Receiver Operating Characteristic (ROC) Curves',
-                xaxis_title='False Positive Rate',
-                yaxis_title='True Positive Rate'
+
+        # Section 5: Network Graph
+        with st.expander("🌐 Feature Correlation Network", expanded=True):
+            col1, col2 = st.columns(2)
+            with col1:
+                corr_threshold = st.slider(
+                    "Correlation threshold",
+                    0.0, 1.0, 0.7, 0.05
+                )
+                network_layout = st.selectbox(
+                    "Layout algorithm",
+                    ['spring', 'circular', 'kamada_kawai'],
+                    index=0
+                )
+            with col2:
+                node_size = st.slider(
+                    "Node size multiplier",
+                    1, 50, 10
+                )
+                show_labels = st.checkbox("Show labels", value=True)
+
+            # Generate correlation network
+            corr_matrix = viz_df.corr().abs()
+            edges = corr_matrix.stack().reset_index()
+            edges.columns = ['source', 'target', 'weight']
+            edges = edges[(edges['weight'] > corr_threshold) & 
+                        (edges['source'] != edges['target'])]
+
+            if not edges.empty:
+                G = nx.from_pandas_edgelist(edges, 'source', 'target', 'weight')
+                
+                # Node positions
+                pos = nx.spring_layout(G) if network_layout == 'spring' else \
+                    nx.circular_layout(G) if network_layout == 'circular' else \
+                    nx.kamada_kawai_layout(G)
+
+                # Create edge traces
+                edge_x = []
+                edge_y = []
+                for edge in G.edges():
+                    x0, y0 = pos[edge[0]]
+                    x1, y1 = pos[edge[1]]
+                    edge_x += [x0, x1, None]
+                    edge_y += [y0, y1, None]
+
+                edge_trace = go.Scatter(
+                    x=edge_x, y=edge_y,
+                    line=dict(width=0.5, color='#888'),
+                    hoverinfo='none',
+                    mode='lines'
+                )
+
+                # Create node traces
+                node_x = [pos[node][0] for node in G.nodes()]
+                node_y = [pos[node][1] for node in G.nodes()]
+                node_text = [f"{node}<br>Connections: {G.degree(node)}" for node in G.nodes()]
+
+                node_trace = go.Scatter(
+                    x=node_x, y=node_y,
+                    mode='markers+text' if show_labels else 'markers',
+                    text=[node for node in G.nodes()],
+                    textposition='top center',
+                    marker=dict(
+                        showscale=True,
+                        colorscale='YlGnBu',
+                        size=[G.degree(node)*node_size for node in G.nodes()],
+                        color=[G.degree(node) for node in G.nodes()],
+                        line_width=2
+                    ),
+                    hovertext=node_text,
+                    hoverinfo='text'
+                )
+
+                fig_network = go.Figure(
+                    data=[edge_trace, node_trace],
+                    layout=go.Layout(
+                        title=f'Feature Correlation Network (Threshold: {corr_threshold})',
+                        showlegend=False,
+                        hovermode='closest',
+                        margin=dict(b=20,l=5,r=5,t=40),
+                        height=600
+                    )
+                )
+                st.plotly_chart(fig_network, use_container_width=True)
+            else:
+                st.warning(f"No correlations above {corr_threshold} found")
+
+        # Section 6: Correlation Heatmap
+        with st.expander("🔥 Correlation Heatmap", expanded=True):
+            corr_method = st.selectbox(
+                "Correlation method",
+                ['pearson', 'kendall', 'spearman'],
+                index=0
             )
-            st.plotly_chart(roc_fig, use_container_width=True)
-        
-        # Scatter Plot
-        fig_scatter = px.scatter(
-            st.session_state.df,
-            x=x_feature,
-            y=y_feature,
-            color=color_by,
-            color_discrete_map=COLOR_SCHEME,
-            size=size_by,
-            hover_data=[col for col in st.session_state.df.columns if col not in [x_feature, y_feature]],
-            height=600,
-            title=f"{y_feature} vs {x_feature}"
-        )
-        st.plotly_chart(fig_scatter, use_container_width=True)
-        
-        # Feature Correlation Network
-        st.subheader("4. Feature Correlation Network")
-        network_col1, network_col2 = st.columns(2)
-        with network_col1:
-            corr_threshold = st.slider("Correlation threshold", 0.0, 1.0, 0.7, 0.05)
-            network_layout = st.selectbox("Network layout", ['spring', 'circular', 'force', 'random'], index=0)
-        with network_col2:
-            node_size_by = st.selectbox("Node size by", ['degree', 'importance', 'uniform'], index=0)
-            show_labels = st.checkbox("Show labels", value=True)
+            fig_heat = px.imshow(
+                viz_df.corr(method=corr_method),
+                color_continuous_scale='RdBu',
+                zmin=-1,
+                zmax=1,
+                title="Feature Correlation Matrix"
+            )
+            st.plotly_chart(fig_heat, use_container_width=True)
 
-        # Network graph processing
-        corr_matrix = viz_df.corr().abs()
-        edges = corr_matrix.stack().reset_index()
-        edges.columns = ['source', 'target', 'weight']
-        edges = edges[(edges['weight'] > corr_threshold) & (edges['source'] != edges['target'])]
-        
-        if not edges.empty:
-            G = nx.from_pandas_edgelist(edges, 'source', 'target', 'weight')
-            # ... [rest of network graph code] ...
-        
-        # ... [rest of original code including heatmaps, feature importance, etc.] ...
-
+    else:
+        st.warning("Please load data in the EDA section first")
 else:
-    st.info("Please upload a Breast Cancer dataset CSV file to begin analysis.")
+    st.info("Please upload a Breast Cancer dataset CSV file to begin analysis")
