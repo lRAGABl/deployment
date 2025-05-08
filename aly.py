@@ -820,7 +820,8 @@ if st.session_state.df is not None:
                 st.info("Please train models first to enable predictions")
         else:
             st.info("Please load and process data in the EDA section first")
-   elif st.session_state.current_tab == "📈 Advanced Visualizations":
+   # Proper indentation fix for the Advanced Visualizations section
+elif st.session_state.current_tab == "📈 Advanced Visualizations":
     # Define consistent color scheme
     COLOR_SCHEME = {
         'B': '#2196F3',  # blue
