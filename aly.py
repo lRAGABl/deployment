@@ -941,20 +941,23 @@ if st.session_state.df is not None:
     
             # Section 4: Model Analysis (in Advanced Visualizations tab)
             with st.expander("🤖 Model Analysis", expanded=True):
-                # Initialize models
-                if 'diagnosis_encoded' not in st.session_state.df.columns:
-                    st.session_state.df['diagnosis_encoded'] = LabelEncoder().fit_transform(st.session_state.df['diagnosis'])
-                
-                # DEFINE X AND Y HERE BEFORE USING THEM
-                X = st.session_state.df[['radius_mean', 'texture_mean']].dropna()
-                y = st.session_state.df['diagnosis_encoded'].loc[X.index]
-                
+                # Initialize models SPECIFICALLY FOR VISUALIZATION
                 if 'adv_models' not in st.session_state:
+                    # Use only 2 features for decision boundary visualization
+                    vis_features = ['radius_mean', 'texture_mean']
+                    
+                    if 'diagnosis_encoded' not in st.session_state.df.columns:
+                        st.session_state.df['diagnosis_encoded'] = LabelEncoder().fit_transform(st.session_state.df['diagnosis'])
+                    
+                    X_vis = st.session_state.df[vis_features].dropna()
+                    y_vis = st.session_state.df['diagnosis_encoded'].loc[X_vis.index]
+                    
+                    # Train models with explicit feature names
                     st.session_state.adv_models = {
-                        'Logistic Regression': LogisticRegression(max_iter=10000).fit(X, y),
-                        'Decision Tree': DecisionTreeClassifier(random_state=42).fit(X, y),
-                        'SVM': SVC(probability=True, kernel='linear').fit(X, y),
-                        'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42).fit(X, y)
+                        'Logistic Regression': LogisticRegression(max_iter=10000).fit(X_vis, y_vis),
+                        'Decision Tree': DecisionTreeClassifier(random_state=42).fit(X_vis, y_vis),
+                        'SVM': SVC(probability=True, kernel='linear').fit(X_vis, y_vis),
+                        'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42).fit(X_vis, y_vis)
                     }
             
                 # Model selection
@@ -967,13 +970,23 @@ if st.session_state.df is not None:
                 # Decision Boundary Plot
                 st.subheader("Decision Boundary")
                 with st.spinner('Generating decision boundary...'):
+                    # Get visualization-specific data
+                    vis_features = ['radius_mean', 'texture_mean']
+                    X_vis = st.session_state.df[vis_features].dropna()
+                    y_vis = st.session_state.df['diagnosis_encoded'].loc[X_vis.index]
+                    
                     mdl = st.session_state.adv_models[selected_model]
                     xx, yy = np.meshgrid(
-                        np.linspace(X['radius_mean'].min(), X['radius_mean'].max(), 100),
-                        np.linspace(X['texture_mean'].min(), X['texture_mean'].max(), 100)
+                        np.linspace(X_vis['radius_mean'].min(), X_vis['radius_mean'].max(), 100),
+                        np.linspace(X_vis['texture_mean'].min(), X_vis['texture_mean'].max(), 100)
                     )
-                    # Rest of the code remains the same...
-                    Z = mdl.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
+                    
+                    # Create grid points
+                    grid_points = np.c_[xx.ravel(), yy.ravel()]
+                    grid_df = pd.DataFrame(grid_points, columns=vis_features)
+                    
+                    # Get predictions
+                    Z = mdl.predict(grid_df).reshape(xx.shape)
                     
                     db_fig = go.Figure()
                     db_fig.add_trace(go.Contour(
@@ -983,10 +996,10 @@ if st.session_state.df is not None:
                         opacity=0.3
                     ))
                     db_fig.add_trace(go.Scatter(
-                        x=X['radius_mean'],
-                        y=X['texture_mean'],
+                        x=X_vis['radius_mean'],
+                        y=X_vis['texture_mean'],
                         mode='markers',
-                        marker=dict(color=y, colorscale='Viridis'),
+                        marker=dict(color=y_vis, colorscale='Viridis'),
                         name='Data Points'
                     ))
                     db_fig.update_layout(title=f'{selected_model} Decision Boundary')
