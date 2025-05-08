@@ -1321,10 +1321,10 @@ if st.session_state.df is not None:
                             title="Random Forest Feature Importance",
                             height=500,
                             color=np.array(st.session_state.selected_features)[indices],
-                            color_discrete_sequence=['#2196F3']*len(indices)
+                            color_discrete_sequence=['#2196F3']*len(indices))
                         fig_imp.update_layout(showlegend=False)
                         st.plotly_chart(fig_imp, use_container_width=True)
-                        )
+                        
                         threshold = st.slider("Importance threshold", 0.0, 0.5, 0.05, 0.01)
                         important_features = [st.session_state.selected_features[i] 
                                             for i in indices if importances[i] > threshold]
