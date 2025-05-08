@@ -941,23 +941,22 @@ if st.session_state.df is not None:
     
             # Section 4: Model Analysis (in Advanced Visualizations tab)
             with st.expander("🤖 Model Analysis", expanded=True):
-                # Initialize models SPECIFICALLY FOR VISUALIZATION
-                if 'adv_models' not in st.session_state:  # Use unique key
-                    if 'diagnosis_encoded' not in st.session_state.df.columns:
-                        st.session_state.df['diagnosis_encoded'] = LabelEncoder().fit_transform(st.session_state.df['diagnosis'])
-                    
-                    # Use ONLY 2 features for decision boundary
-                    X_adv = st.session_state.df[['radius_mean', 'texture_mean']].dropna()
-                    y_adv = st.session_state.df['diagnosis_encoded'].loc[X_adv.index]
-                    
-                    # Train models specifically for visualization
+                # Initialize models
+                if 'diagnosis_encoded' not in st.session_state.df.columns:
+                    st.session_state.df['diagnosis_encoded'] = LabelEncoder().fit_transform(st.session_state.df['diagnosis'])
+                
+                # DEFINE X AND Y HERE BEFORE USING THEM
+                X = st.session_state.df[['radius_mean', 'texture_mean']].dropna()
+                y = st.session_state.df['diagnosis_encoded'].loc[X.index]
+                
+                if 'adv_models' not in st.session_state:
                     st.session_state.adv_models = {
-                        'Logistic Regression': LogisticRegression(max_iter=10000).fit(X_adv, y_adv),
-                        'Decision Tree': DecisionTreeClassifier(random_state=42).fit(X_adv, y_adv),
-                        'SVM': SVC(probability=True, kernel='linear').fit(X_adv, y_adv),
-                        'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42).fit(X_adv, y_adv)
+                        'Logistic Regression': LogisticRegression(max_iter=10000).fit(X, y),
+                        'Decision Tree': DecisionTreeClassifier(random_state=42).fit(X, y),
+                        'SVM': SVC(probability=True, kernel='linear').fit(X, y),
+                        'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42).fit(X, y)
                     }
-
+            
                 # Model selection
                 selected_model = st.selectbox(
                     "Select Model",
@@ -965,19 +964,15 @@ if st.session_state.df is not None:
                     index=0
                 )
             
-                # Get the visualization-specific model
-                mdl = st.session_state.adv_models[selected_model]
-                
-                # Rest of the decision boundary code remains the same...
-    
                 # Decision Boundary Plot
                 st.subheader("Decision Boundary")
                 with st.spinner('Generating decision boundary...'):
-                    mdl = st.session_state.models[selected_model]
+                    mdl = st.session_state.adv_models[selected_model]
                     xx, yy = np.meshgrid(
                         np.linspace(X['radius_mean'].min(), X['radius_mean'].max(), 100),
                         np.linspace(X['texture_mean'].min(), X['texture_mean'].max(), 100)
                     )
+                    # Rest of the code remains the same...
                     Z = mdl.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
                     
                     db_fig = go.Figure()
