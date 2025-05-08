@@ -939,29 +939,36 @@ if st.session_state.df is not None:
                 )
                 st.plotly_chart(fig_scatter, use_container_width=True)
     
-            # Section 4: Model Analysis
+            # Section 4: Model Analysis (in Advanced Visualizations tab)
             with st.expander("🤖 Model Analysis", expanded=True):
-                # Initialize models
-                if 'diagnosis_encoded' not in st.session_state.df.columns:
-                    st.session_state.df['diagnosis_encoded'] = LabelEncoder().fit_transform(st.session_state.df['diagnosis'])
-                
-                X = st.session_state.df[['radius_mean', 'texture_mean']].dropna()
-                y = st.session_state.df['diagnosis_encoded'].loc[X.index]
-                
-                if 'models' not in st.session_state:
-                    st.session_state.models = {
-                        'Logistic Regression': LogisticRegression(max_iter=10000).fit(X, y),
-                        'Decision Tree': DecisionTreeClassifier(random_state=42).fit(X, y),
-                        'SVM': SVC(probability=True, kernel='linear').fit(X, y),
-                        'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42).fit(X, y)
+                # Initialize models SPECIFICALLY FOR VISUALIZATION
+                if 'adv_models' not in st.session_state:  # Use unique key
+                    if 'diagnosis_encoded' not in st.session_state.df.columns:
+                        st.session_state.df['diagnosis_encoded'] = LabelEncoder().fit_transform(st.session_state.df['diagnosis'])
+                    
+                    # Use ONLY 2 features for decision boundary
+                    X_adv = st.session_state.df[['radius_mean', 'texture_mean']].dropna()
+                    y_adv = st.session_state.df['diagnosis_encoded'].loc[X_adv.index]
+                    
+                    # Train models specifically for visualization
+                    st.session_state.adv_models = {
+                        'Logistic Regression': LogisticRegression(max_iter=10000).fit(X_adv, y_adv),
+                        'Decision Tree': DecisionTreeClassifier(random_state=42).fit(X_adv, y_adv),
+                        'SVM': SVC(probability=True, kernel='linear').fit(X_adv, y_adv),
+                        'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42).fit(X_adv, y_adv)
                     }
-    
+
                 # Model selection
                 selected_model = st.selectbox(
                     "Select Model",
-                    options=list(st.session_state.models.keys()),
+                    options=list(st.session_state.adv_models.keys()),
                     index=0
                 )
+            
+                # Get the visualization-specific model
+                mdl = st.session_state.adv_models[selected_model]
+                
+                # Rest of the decision boundary code remains the same...
     
                 # Decision Boundary Plot
                 st.subheader("Decision Boundary")
