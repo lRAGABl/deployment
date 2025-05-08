@@ -941,13 +941,16 @@ if st.session_state.df is not None:
     
             # Section 4: Model Analysis (in Advanced Visualizations tab)
             with st.expander("🤖 Model Analysis", expanded=True):
+                # Ensure diagnosis encoding exists
+                if 'diagnosis_encoded' not in st.session_state.df.columns:
+                    st.session_state.df['diagnosis_encoded'] = LabelEncoder().fit_transform(
+                        st.session_state.df['diagnosis']
+                    )
+                
                 # Initialize models SPECIFICALLY FOR VISUALIZATION
                 if 'adv_models' not in st.session_state:
                     # Use only 2 features for decision boundary visualization
                     vis_features = ['radius_mean', 'texture_mean']
-                    
-                    if 'diagnosis_encoded' not in st.session_state.df.columns:
-                        st.session_state.df['diagnosis_encoded'] = LabelEncoder().fit_transform(st.session_state.df['diagnosis'])
                     
                     X_vis = st.session_state.df[vis_features].dropna()
                     y_vis = st.session_state.df['diagnosis_encoded'].loc[X_vis.index]
@@ -959,6 +962,7 @@ if st.session_state.df is not None:
                         'SVM': SVC(probability=True, kernel='linear').fit(X_vis, y_vis),
                         'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42).fit(X_vis, y_vis)
                     }
+            
             
                 # Model selection
                 selected_model = st.selectbox(
