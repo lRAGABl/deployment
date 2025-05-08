@@ -943,6 +943,110 @@ if st.session_state.df is not None:
                     [None] + viz_df.columns.tolist(),
                     index=0
                 )
+
+            # Add model selection radio buttons
+            selected_model = st.radio(
+                "Select Model for Analysis:",
+                options=list(st.session_state.models.keys()),
+                index=0,
+                horizontal=True
+            )
+            
+            # --- New Section: Decision Boundary Visualization ---
+            # Generate decision boundary plot
+            st.header("Model Decision Boundary")
+            with st.spinner('Generating decision boundary...'):
+                mdl = st.session_state.models[selected_model]
+                
+                # Create mesh grid for decision boundary
+                xx, yy = np.meshgrid(
+                    np.linspace(X[feature_x].min(), X[feature_x].max(), 100),
+                    np.linspace(X[feature_y].min(), X[feature_y].max(), 100)
+                )
+                Z = mdl.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
+                
+                # Create plotly figure
+                db_fig = go.Figure()
+                db_fig.add_trace(go.Contour(
+                    x=xx[0], y=yy[:,0], z=Z,
+                    showscale=False, 
+                    colorscale='RdBu', 
+                    opacity=0.3
+                ))
+                db_fig.add_trace(go.Scatter(
+                    x=X[feature_x], 
+                    y=X[feature_y],
+                    mode='markers',
+                    marker=dict(color=y, colorscale='Viridis'),
+                    name='Data Points'
+                ))
+                db_fig.update_layout(title=f'{selected_model} Decision Boundary')
+                st.plotly_chart(db_fig, use_container_width=True)
+            
+            # --- New Section: Model Metrics Visualization ---
+            # Calculate and display model metrics
+            st.header("Model Performance Metrics")
+            with st.spinner('Calculating metrics...'):
+                pred = st.session_state.models[selected_model].predict(X)
+                metrics = {
+                    'Accuracy': accuracy_score(y, pred),
+                    'Precision': precision_score(y, pred),
+                    'Recall': recall_score(y, pred),
+                    'F1 Score': f1_score(y, pred)
+                }
+                
+                # Create bar chart
+                metrics_fig = go.Figure(data=[
+                    go.Bar(
+                        x=list(metrics.keys()),
+                        y=list(metrics.values()),
+                        marker_color=['blue','green','red','orange']
+                    )
+                ])
+                metrics_fig.update_layout(
+                    title=f'{selected_model} Metrics',
+                    yaxis=dict(range=[0,1])
+                )
+                st.plotly_chart(metrics_fig, use_container_width=True)
+            
+            # --- New Section: ROC Curve Visualization ---
+            # Generate ROC curves for all models
+            st.header("ROC Curves Comparison")
+            with st.spinner('Generating ROC curves...'):
+                roc_fig = go.Figure()
+                colors = ['blue','green','red','orange']
+                
+                for (name, model), color in zip(st.session_state.models.items(), colors):
+                    # Get model scores
+                    if hasattr(model, 'predict_proba'):
+                        scores = model.predict_proba(X)[:,1]
+                    else:
+                        scores = model.decision_function(X)
+                    
+                    # Calculate ROC curve
+                    fpr, tpr, _ = roc_curve(y, scores)
+                    roc_auc = auc(fpr, tpr)
+                    
+                    roc_fig.add_trace(go.Scatter(
+                        x=fpr, y=tpr,
+                        mode='lines',
+                        name=f'{name} (AUC = {roc_auc:.2f})',
+                        line=dict(color=color)
+                    ))
+                
+                # Add chance line
+                roc_fig.add_trace(go.Scatter(
+                    x=[0,1], y=[0,1],
+                    mode='lines',
+                    line=dict(dash='dash', color='gray'),
+                    name='Random Chance'
+                ))
+                roc_fig.update_layout(
+                    title='Receiver Operating Characteristic (ROC) Curves',
+                    xaxis_title='False Positive Rate',
+                    yaxis_title='True Positive Rate'
+                )
+                st.plotly_chart(roc_fig, use_container_width=True)
             
             fig_scatter = px.scatter(
                 st.session_state.df,
