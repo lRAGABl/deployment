@@ -944,6 +944,30 @@ if st.session_state.df is not None:
                     index=0
                 )
 
+            if st.session_state.df is not None:
+                # Create encoded diagnosis column if not exists
+                if 'diagnosis_encoded' not in st.session_state.df.columns:
+                    st.session_state.df['diagnosis_encoded'] = LabelEncoder().fit_transform(st.session_state.df['diagnosis'])
+                
+                # Define static features for decision boundary visualization
+                feature_x = 'radius_mean'
+                feature_y = 'texture_mean'
+                
+                # Prepare X and y for model training
+                X = st.session_state.df[[feature_x, feature_y]].dropna()
+                y = st.session_state.df['diagnosis_encoded'].loc[X.index]
+                
+                # --- New Section: Train Models ---
+                # Train models and store in session state
+                if 'models' not in st.session_state:
+                    st.session_state.models = {
+                        'Logistic Regression': LogisticRegression(max_iter=10000).fit(X, y),
+                        'Decision Tree': DecisionTreeClassifier(random_state=42).fit(X, y),
+                        'SVM': SVC(probability=True, kernel='linear').fit(X, y),
+                        'Random Forest': RandomForestClassifier(n_estimators=100, random_state=42).fit(X, y)
+                    }
+
+
             # Add model selection radio buttons
             selected_model = st.radio(
                 "Select Model for Analysis:",
