@@ -1266,37 +1266,27 @@ if st.session_state.df is not None:
                             db_fig.update_layout(title='Decision Boundary')
                             st.plotly_chart(db_fig, use_container_width=True)
                         
-                        with col2:
-                            st.subheader("SHAP Explanations")
-                            if st.button("Generate SHAP Values"):
-                                with st.spinner('Calculating SHAP...'):
-                                    try:
-                                        explainer = shap.Explainer(mdl, X_vis)
-                                        shap_values = explainer(X_vis)
-                                        
-                                        fig_summary, ax = plt.subplots()
-                                        shap.summary_plot(shap_values, X_vis, plot_type="bar", show=False)
-                                        st.pyplot(fig_summary)
-                                        
-                                        st.subheader("Individual Explanation")
-                                        sample_idx = st.slider("Sample Index", 0, len(X_vis)-1, 0)
-                                        fig_force = shap.plots.force(shap_values[sample_idx], matplotlib=True, show=False)
-                                        st.pyplot(fig_force)
-                                    except Exception as e:
-                                        st.error(f"SHAP error: {str(e)}")
-    
-                            st.subheader("Threshold Tuning")
-                            threshold = st.slider("Classification Threshold", 0.0, 1.0, 0.5, 0.01)
-                            proba = mdl.predict_proba(X_vis)[:, 1]
-                            adjusted_pred = (proba >= threshold).astype(int)
-                            
-                            metrics = {
-                                'Accuracy': accuracy_score(y_vis, adjusted_pred),
-                                'Precision': precision_score(y_vis, adjusted_pred),
-                                'Recall': recall_score(y_vis, adjusted_pred),
-                                'F1': f1_score(y_vis, adjusted_pred)
-                            }
-                            st.dataframe(pd.DataFrame([metrics]).T.style.background_gradient(cmap='Blues'))
+                    # In the threshold tuning section, replace:
+                    # proba = mdl.predict_proba(X_vis)[:, 1]
+                    # With:
+                    proba = st.session_state.vis_model.predict_proba(X_vis)[:, 1]
+                    
+                    # The corrected section should look like:
+                    with col2:
+                        st.subheader("Threshold Tuning")
+                        threshold = st.slider("Classification Threshold", 0.0, 1.0, 0.5, 0.01)
+                        
+                        # Use the visualization model
+                        proba = st.session_state.vis_model.predict_proba(X_vis)[:, 1]
+                        adjusted_pred = (proba >= threshold).astype(int)
+                        
+                        metrics = {
+                            'Accuracy': accuracy_score(y_vis, adjusted_pred),
+                            'Precision': precision_score(y_vis, adjusted_pred),
+                            'Recall': recall_score(y_vis, adjusted_pred),
+                            'F1': f1_score(y_vis, adjusted_pred)
+                        }
+                        st.dataframe(pd.DataFrame([metrics]).T.style.background_gradient(cmap='Blues'))
     
                 else:
                     st.warning("Please train models first in the ML Modeling tab to see evaluation metrics")
