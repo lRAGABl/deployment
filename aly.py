@@ -1215,31 +1215,39 @@ if st.session_state.df is not None:
                         st.session_state.df['diagnosis_encoded'] = LabelEncoder()\
                             .fit_transform(st.session_state.df['diagnosis'])
                     
-                    # The corrected section should look like:
+                    # In the Model Diagnostics section (tab4), modify the code:
+                    
                     with tab4:
                         # Advanced Model Diagnostics
                         col1, col2 = st.columns(2)
                         with col1:
                             st.subheader("Decision Boundary")
                             
-                            # Add diagnosis_encoded if missing
+                            # Create dedicated visualization model with only 2 features
+                            vis_features = ['radius_mean', 'texture_mean']
                             if 'diagnosis_encoded' not in st.session_state.df.columns:
                                 st.session_state.df['diagnosis_encoded'] = LabelEncoder()\
                                     .fit_transform(st.session_state.df['diagnosis'])
                             
-                            vis_features = ['radius_mean', 'texture_mean']
                             X_vis = st.session_state.df[vis_features].dropna()
                             y_vis = st.session_state.df['diagnosis_encoded'].loc[X_vis.index]
                             
-                            # Rest of the code...
-                            mdl = st.session_state.models['Random Forest']
+                            # Train a separate model just for visualization
+                            if 'vis_model' not in st.session_state:
+                                st.session_state.vis_model = RandomForestClassifier(n_estimators=100, random_state=42)
+                                st.session_state.vis_model.fit(X_vis, y_vis)
+                            
+                            # Generate grid using only the 2 visualization features
                             xx, yy = np.meshgrid(
-                                np.linspace(X_vis['radius_mean'].min(), X_vis['radius_mean'].max(), 100),
-                                np.linspace(X_vis['texture_mean'].min(), X_vis['texture_mean'].max(), 100)
+                                np.linspace(X_vis[vis_features[0]].min(), X_vis[vis_features[0]].max(), 100),
+                                np.linspace(X_vis[vis_features[1]].min(), X_vis[vis_features[1]].max(), 100)
                             )
                             grid_points = np.c_[xx.ravel(), yy.ravel()]
                             grid_df = pd.DataFrame(grid_points, columns=vis_features)
-                            Z = mdl.predict(grid_df).reshape(xx.shape)
+                            
+                            # Predict using visualization-specific model
+                            Z = st.session_state.vis_model.predict(grid_df).reshape(xx.shape)
+                            
                             
                             db_fig = go.Figure()
                             db_fig.add_trace(go.Contour(
