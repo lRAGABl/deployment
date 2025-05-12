@@ -27,9 +27,10 @@ import plotly.graph_objects as go
 import plotly.figure_factory as ff
 import base64
 import time
-import shap
+from sklearn.preprocessing import LabelEncoder
 from lifelines import KaplanMeierFitter
-from sklearn.preprocessing import LabelEncoder  # Add this at the top of your file
+# Add to top with other imports
+import plotly.graph_objects as go
 
 # Configure the app
 st.set_page_config(layout="wide", page_title="Breast Cancer Analysis")
@@ -64,14 +65,60 @@ with st.sidebar:
     
     st.markdown("---")
     st.markdown("### Data Management")
-    uploaded_file = st.file_uploader("Upload Dataset (CSV)", type=['csv'])
     
+    st.title("Upload Dataset (CSV, Excel, or JSON)")
+
+    # Support CSV, Excel, and JSON files
+    uploaded_file = st.file_uploader("Upload your dataset", type=['csv', 'xlsx', 'json'])
+
     if uploaded_file:
-        st.session_state.df = pd.read_csv(uploaded_file)
-        st.session_state.original_df = st.session_state.df.copy()
-        st.session_state.processed = False  # Reset processing state on new upload
-        st.success("Dataset loaded successfully!")
-    
+        file_type = uploaded_file.name.split('.')[-1]
+
+        try:
+            if file_type == 'csv':
+                df = pd.read_csv(uploaded_file)
+            elif file_type == 'xlsx':
+                df = pd.read_excel(uploaded_file)
+            elif file_type == 'json':
+                df = pd.read_json(uploaded_file)
+            else:
+                st.error("Unsupported file type.")
+                df = None
+
+            if df is not None:
+                st.session_state.df = df
+                st.session_state.original_df = df.copy()
+                st.session_state.processed = False
+                st.success(f"{file_type.upper()} file loaded successfully!")
+                st.dataframe(df)
+
+        except Exception as e:
+            st.error(f"Error reading the file: {e}")
+            
+    # Feature and target selection
+        if 'df' in st.session_state:
+            data = st.session_state.df
+
+            st.sidebar.markdown("---")
+            st.sidebar.markdown("### 🔧 Feature Selection")
+            
+            features = [col for col in data.columns if col.lower() not in ['diagnosis']]
+            selected_features = st.sidebar.multiselect("**Select Input Features**", options=features, default=features)
+
+            target_options = [col for col in ['diagnosis','id']]
+            target = st.sidebar.selectbox("**Select Target Variable**", options=target_options)
+
+            if selected_features and target:
+                X = data[selected_features]
+                y = data[target]
+
+                st.write("### 📌 Selected Input Features")
+                st.dataframe(X.head())
+
+                st.write("### 🎯 Selected Target")
+                st.dataframe(y.head())
+                st.session_state.df = st.session_state.df[selected_features + [target]]
+                
     st.markdown("---")
     st.markdown("### About This App")
     st.info("""
@@ -199,7 +246,8 @@ if st.session_state.df is not None:
                 st.subheader("Basic Info")
                 buffer = StringIO()
                 st.session_state.df.info(buf=buffer)
-                st.text(buffer.getvalue())
+                info_str = buffer.getvalue()
+                st.code(info_str,language="text")
                 
             with col2:
                 st.subheader("Descriptive Statistics")
@@ -219,23 +267,15 @@ if st.session_state.df is not None:
         
         with eda_process_tab:
             st.header("Data Processing Options")
-            
-            # Column selection
-            st.subheader("1. Column Selection")
-            st.session_state.remove_cols = st.multiselect(
-                "Select columns to remove",
-                options=st.session_state.df.columns,
-                default=['Unnamed: 32'] if 'Unnamed: 32' in st.session_state.df.columns else None
-            )
-            
+                        
             # Outlier detection
-            st.subheader("2. Outlier Detection")
+            st.subheader("1. Outlier Detection")
             if st.button("Detect Outliers"):
                 st.session_state.outliers_count = detect_outliers(st.session_state.df)
                 st.dataframe(st.session_state.outliers_count)
             
             # Outlier handling
-            st.subheader("3. Outlier Handling")
+            st.subheader("2. Outlier Handling")
             st.markdown("💡 *Capping is generally preferred over removal*")
             outlier_method = st.radio(
                 "Select outlier handling method:",
@@ -245,12 +285,7 @@ if st.session_state.df is not None:
             
             if st.button("Apply Processing"):
                 with st.spinner("Processing data..."):
-                    df = st.session_state.original_df.copy()
-                    
-                    # Remove columns
-                    if st.session_state.remove_cols:
-                        df = df.drop(st.session_state.remove_cols, axis=1)
-                    
+                    df = st.session_state.original_df.copy()                    
                     # Handle outliers
                     if outlier_method != "None":
                         numeric_cols = df.select_dtypes(include=np.number).columns
@@ -823,8 +858,6 @@ if st.session_state.df is not None:
                 st.info("Please train models first to enable predictions")
         else:
             st.info("Please load and process data in the EDA section first")
-    # ... [Previous code until Advanced Visualizations section] ...
-    
     # Advanced Visualizations Section
     elif st.session_state.current_tab == "📈 Advanced Visualizations":
         # Define consistent color scheme
@@ -835,6 +868,9 @@ if st.session_state.df is not None:
             'Malignant': '#2196F3',
             '0': '#4CAF50',  # For numeric encoded benign
             '1': '#2196F3'   # For numeric encoded malignant
+               # Add these new entries for 3D visualization
+            '3D_M': '#FF0000',  # Red for malignant
+            '3D_B': '#00FF00'   # Green for benign
         }
     
         if st.session_state.df is not None:
@@ -842,39 +878,6 @@ if st.session_state.df is not None:
             
             # Create a clean numeric dataframe for visualizations
             viz_df = st.session_state.df.select_dtypes(include=np.number)
-            
-            # ================== Feature Engineering ==================
-            with st.expander("🧩 Feature Engineering", expanded=True):
-                st.subheader("Create New Features")
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    num_feature1 = st.selectbox("First feature", viz_df.columns)
-                    num_feature2 = st.selectbox("Second feature", viz_df.columns)
-                    operation = st.selectbox("Operation", 
-                        ['Add', 'Subtract', 'Multiply', 'Divide', 'Ratio'])
-                
-                with col2:
-                    new_feature_name = st.text_input("New feature name", "feature_new")
-                    if st.button("💡 Create Feature"):
-                        try:
-                            if operation == 'Add':
-                                st.session_state.df[new_feature_name] = st.session_state.df[num_feature1] + st.session_state.df[num_feature2]
-                            elif operation == 'Subtract':
-                                st.session_state.df[new_feature_name] = st.session_state.df[num_feature1] - st.session_state.df[num_feature2]
-                            elif operation == 'Multiply':
-                                st.session_state.df[new_feature_name] = st.session_state.df[num_feature1] * st.session_state.df[num_feature2]
-                            elif operation == 'Divide':
-                                st.session_state.df[new_feature_name] = st.session_state.df[num_feature1] / (st.session_state.df[num_feature2] + 1e-6)
-                            elif operation == 'Ratio':
-                                st.session_state.df[new_feature_name] = st.session_state.df[num_feature1] / (st.session_state.df[num_feature2] + 1e-6)
-                            
-                            viz_df = st.session_state.df.select_dtypes(include=np.number)
-                            st.success(f"Created new feature: {new_feature_name}")
-                            st.experimental_rerun()
-                        except Exception as e:
-                            st.error(f"Error creating feature: {str(e)}")
-    
             # ================== Core Visualizations ==================
             # Section 1: Interactive Histogram
             with st.expander("📊 Interactive Histogram", expanded=True):
@@ -994,6 +997,67 @@ if st.session_state.df is not None:
                     title=f"{y_feature} vs {x_feature}"
                 )
                 st.plotly_chart(fig_scatter, use_container_width=True)
+
+            # ======== ADD THIS NEW SECTION ========
+            with st.expander("🚀 3D Tumor Feature Space", expanded=True):
+                st.subheader("Interactive 3D Feature Exploration")
+                
+                # Create three columns for feature selection
+                col1, col2, col3 = st.columns(3)
+                with col1:
+                    x_feature = st.selectbox("X-axis", viz_df.columns, index=0)
+                with col2:
+                    y_feature = st.selectbox("Y-axis", viz_df.columns, index=1)
+                with col3:
+                    z_feature = st.selectbox("Z-axis", viz_df.columns, index=2)
+                
+                # Additional controls
+                color_by = st.selectbox("Color by", ['diagnosis', 'radius_mean', 'texture_mean'])
+                size_by = st.selectbox("Size by (optional)", ['None', 'area_mean', 'perimeter_mean'])
+                sample_size = st.slider("Sample %", 10, 100, 100)
+                
+                # Create plot
+                if st.session_state.df is not None:
+                    plot_df = st.session_state.df.sample(frac=sample_size/100)
+                    
+                    fig = px.scatter_3d(
+                        plot_df,
+                        x=x_feature,
+                        y=y_feature,
+                        z=z_feature,
+                        color=color_by,
+                        size=size_by if size_by != 'None' else None,
+                        hover_name='id',
+                        hover_data=['diagnosis', 'radius_mean', 'texture_mean'],
+                        color_discrete_map={'M': '#FF0000', 'B': '#00FF00'},
+                        height=800,
+                        title=f"3D Tumor Feature Space: {x_feature} vs {y_feature} vs {z_feature}"
+                    )
+                    
+                    # Enhance visualization
+                    fig.update_traces(
+                        marker=dict(
+                            size=8 if size_by == 'None' else None,
+                            opacity=0.7,
+                            line=dict(width=0.5, color='DarkSlateGrey')
+                        ),
+                        selector=dict(mode='markers')
+                    )
+                    
+                    fig.update_layout(
+                        scene=dict(
+                            xaxis_title=x_feature,
+                            yaxis_title=y_feature,
+                            zaxis_title=z_feature,
+                            camera=dict(
+                                eye=dict(x=1.5, y=1.5, z=0.1)
+                        )
+                    )
+                    
+                    st.plotly_chart(fig, use_container_width=True)
+                else:
+                    st.warning("Please load data first")
+  
             
             # ================== Advanced Analytics ==================
             # Section 4: Network Graph of Feature Correlations
@@ -1104,6 +1168,9 @@ if st.session_state.df is not None:
                     st.plotly_chart(fig_network, use_container_width=True)
                 else:
                     st.warning(f"No correlations above {corr_threshold} threshold found.")
+
+
+            
             
             # ================== Model Evaluation ==================
             with st.expander("🤖 Model Diagnostics & Evaluation", expanded=True):
