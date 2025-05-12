@@ -1052,7 +1052,7 @@ if st.session_state.df is not None:
                                 eye=dict(x=1.5, y=1.5, z=0.1)
                         )
                     )
-                    
+                    )
                     st.plotly_chart(fig, use_container_width=True)
                 else:
                     st.warning("Please load data first")
