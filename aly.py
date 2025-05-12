@@ -867,9 +867,8 @@ if st.session_state.df is not None:
             'Benign': '#4CAF50',
             'Malignant': '#2196F3',
             '0': '#4CAF50',  # For numeric encoded benign
-            '1': '#2196F3'   # For numeric encoded malignant
-               # Add these new entries for 3D visualization
-            '3D_M': '#FF0000',  # Red for malignant
+            '1': '#2196F3',  # For numeric encoded malignant
+            '3D_M': '#FF0000', 
             '3D_B': '#00FF00'   # Green for benign
         }
     
