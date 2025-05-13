@@ -591,7 +591,7 @@ if st.session_state.current_tab == "📊 Predictions on Pretrained Models":
         pass
 else:    
     # Main Content Area - Controlled by Sidebar Selection
-    if st.session_state.df is not None & flag==True:
+    if st.session_state.df is not None and flag:
         if st.session_state.current_tab == "🔍 Exploratory Data Analysis":
             st.header("Exploratory Data Analysis")
             
