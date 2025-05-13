@@ -1112,103 +1112,103 @@ if st.session_state.df is not None:
         'Logistic Regression': lg_model
         }
 
-            # Create input form
-            with st.form("prediction_form"):
-                st.markdown("**Enter feature values for prediction:**")
+        # Create input form
+        with st.form("prediction_form"):
+            st.markdown("**Enter feature values for prediction:**")
+            
+            input_data = {}
+            cols = st.columns(3)
+            
+            # Get default values
+            default_values = {
+                feature: float(st.session_state.X_train[feature].mean())
+                for feature in st.session_state.selected_features
+            }
+            
+            # Create input fields
+            for i, feature in enumerate(st.session_state.selected_features):
+                with cols[i % 3]:
+                    input_data[feature] = st.number_input(
+                        label=feature,
+                        value=default_values[feature],
+                        step=0.01,
+                        format="%.4f",
+                        key=f"input_{feature}"
+                    )
+            
+            submitted = st.form_submit_button("Predict Diagnosis")
+            
+            if submitted:
+                sample_df = pd.DataFrame([input_data])
                 
-                input_data = {}
-                cols = st.columns(3)
+                st.markdown("**Input Features:**")
+                st.dataframe(sample_df.style.format("{:.4f}"))
                 
-                # Get default values
-                default_values = {
-                    feature: float(st.session_state.X_train[feature].mean())
-                    for feature in st.session_state.selected_features
+                # Get predictions from all models
+                predictions = {}
+                for name, model in st.session_state.models.items():
+                    predictions[name] = predict_new_sample(
+                        model, 
+                        sample_df, 
+                        st.session_state.selected_features
+                    )
+                
+                # Display individual model predictions
+                st.markdown("**Model Predictions:**")
+                model_cols = st.columns(len(predictions))
+                
+                for (model_name, pred), col in zip(predictions.items(), model_cols):
+                    with col:
+                        if pred['prediction'].startswith('Malignant'):
+                            emoji = "🔴"  # Red circle for malignant
+                        else:
+                            emoji = "🟢"  # Green circle for benign
+                        
+                        st.metric(
+                            f"{emoji} {model_name}",
+                            pred['prediction'],
+                            help=f"Confidence: {pred['confidence']}"
+                        )
+                
+                # Calculate final weighted decision
+                st.markdown("---")
+                st.subheader("Final Diagnosis Decision")
+                
+                # Define model weights (based on test accuracy)
+                model_weights = {
+                    'Logistic Regression': 0.3,
+                    'Random Forest': 0.4,  # Highest weight as it's generally most reliable
+                    'SVM': 0.2,
+                    'Decision Tree': 0.1
                 }
                 
-                # Create input fields
-                for i, feature in enumerate(st.session_state.selected_features):
-                    with cols[i % 3]:
-                        input_data[feature] = st.number_input(
-                            label=feature,
-                            value=default_values[feature],
-                            step=0.01,
-                            format="%.4f",
-                            key=f"input_{feature}"
-                        )
+                # Calculate weighted probabilities
+                malignant_votes = 0
+                benign_votes = 0
+                total_confidence = 0
                 
-                submitted = st.form_submit_button("Predict Diagnosis")
-                
-                if submitted:
-                    sample_df = pd.DataFrame([input_data])
-                    
-                    st.markdown("**Input Features:**")
-                    st.dataframe(sample_df.style.format("{:.4f}"))
-                    
-                    # Get predictions from all models
-                    predictions = {}
-                    for name, model in st.session_state.models.items():
-                        predictions[name] = predict_new_sample(
-                            model, 
-                            sample_df, 
-                            st.session_state.selected_features
-                        )
-                    
-                    # Display individual model predictions
-                    st.markdown("**Model Predictions:**")
-                    model_cols = st.columns(len(predictions))
-                    
-                    for (model_name, pred), col in zip(predictions.items(), model_cols):
-                        with col:
-                            if pred['prediction'].startswith('Malignant'):
-                                emoji = "🔴"  # Red circle for malignant
-                            else:
-                                emoji = "🟢"  # Green circle for benign
-                            
-                            st.metric(
-                                f"{emoji} {model_name}",
-                                pred['prediction'],
-                                help=f"Confidence: {pred['confidence']}"
-                            )
-                    
-                    # Calculate final weighted decision
-                    st.markdown("---")
-                    st.subheader("Final Diagnosis Decision")
-                    
-                    # Define model weights (based on test accuracy)
-                    model_weights = {
-                        'Logistic Regression': 0.3,
-                        'Random Forest': 0.4,  # Highest weight as it's generally most reliable
-                        'SVM': 0.2,
-                        'Decision Tree': 0.1
-                    }
-                    
-                    # Calculate weighted probabilities
-                    malignant_votes = 0
-                    benign_votes = 0
-                    total_confidence = 0
-                    
-                    for model_name, pred in predictions.items():
-                        weight = model_weights.get(model_name, 0.25)
-                        if pred['prediction'].startswith('Malignant'):
-                            malignant_votes += weight
-                        else:
-                            benign_votes += weight
-                        total_confidence += float(pred['confidence'].strip('%')) * weight
-                    
-                    # Determine final prediction
-                    final_prediction = "Malignant (M)" if malignant_votes > benign_votes else "Benign (B)"
-                    confidence = total_confidence / sum(model_weights.values())
-                    certainty = "High" if confidence > 75 else "Medium" if confidence > 60 else "Low"
-                    
-                    # Display final decision with visual flair
-                    if final_prediction == "Malignant (M)":
-                        st.error(f"🚨 Final Decision: {final_prediction} (Certainty: {certainty})")
-                        st.image("sad.png",
-                                width=260)
+                for model_name, pred in predictions.items():
+                    weight = model_weights.get(model_name, 0.25)
+                    if pred['prediction'].startswith('Malignant'):
+                        malignant_votes += weight
                     else:
-                        st.success(f"✅ Final Decision: {final_prediction} (Certainty: {certainty})")
-                        st.image("happy.png",
-                                width=260)
+                        benign_votes += weight
+                    total_confidence += float(pred['confidence'].strip('%')) * weight
+                
+                # Determine final prediction
+                final_prediction = "Malignant (M)" if malignant_votes > benign_votes else "Benign (B)"
+                confidence = total_confidence / sum(model_weights.values())
+                certainty = "High" if confidence > 75 else "Medium" if confidence > 60 else "Low"
+                
+                # Display final decision with visual flair
+                if final_prediction == "Malignant (M)":
+                    st.error(f"🚨 Final Decision: {final_prediction} (Certainty: {certainty})")
+                    st.image("sad.png",
+                            width=260)
+                else:
+                    st.success(f"✅ Final Decision: {final_prediction} (Certainty: {certainty})")
+                    st.image("happy.png",
+                            width=260)
 #____________________________________________________________________________________________                            
                     def analyze_weighted_votes(malignant_votes, benign_votes):
                         total_votes = malignant_votes + benign_votes
