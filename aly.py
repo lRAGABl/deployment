@@ -1758,7 +1758,7 @@ if st.session_state.df is not None:
 
 
 if st.session_state.current_tab == "📊 Predictions on Pretrained Models":
-    df = pd.read_csv(uploaded_file)
+    df = pd.read_csv('Breast Cancer.csv')
     if df is not None:
         st.session_state.df = df
         st.session_state.original_df = df.copy()
