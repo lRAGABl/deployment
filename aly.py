@@ -34,7 +34,7 @@ import joblib
 # Configure the app
 st.set_page_config(layout="wide", page_title="Breast Cancer Analysis")
 st.title("🧠 Breast Cancer Analysis Dashboard")
-flag=false
+flag=False
 # Initialize session state
 if 'df' not in st.session_state:
     st.session_state.df = None
@@ -92,7 +92,7 @@ with st.sidebar:
                 st.success(f"{file_type.upper()} file loaded successfully!")
                 st.dataframe(df)
             else:
-                flag = true
+                flag = True
 
         except Exception as e:
             st.error(f"Error reading the file: {e}")
@@ -591,7 +591,7 @@ if st.session_state.current_tab == "📊 Predictions on Pretrained Models":
         pass
 else:    
     # Main Content Area - Controlled by Sidebar Selection
-    if st.session_state.df is not None & flag==true:
+    if st.session_state.df is not None & flag==True:
         if st.session_state.current_tab == "🔍 Exploratory Data Analysis":
             st.header("Exploratory Data Analysis")
             
