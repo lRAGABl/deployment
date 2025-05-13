@@ -1763,7 +1763,6 @@ if st.session_state.current_tab == "📊 Predictions on Pretrained Models":
         st.session_state.df = df
         st.session_state.original_df = df.copy()
         st.session_state.processed = False
-        st.success(f"{file_type.upper()} file loaded successfully!")
         st.dataframe(df)
     selected_features = ['radius_mean', 'perimeter_mean', 'area_mean', 'compactness_mean',
    'concavity_mean', 'concave points_mean', 'radius_se', 'perimeter_se',
