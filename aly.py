@@ -1753,5 +1753,5 @@ elif st.session_state.current_tab == "📊 Predictions on Pretrained Models":
                     st.write(f"- Average Confidence: {confidence:.1f}%")
 
         pass
-    else:
-        st.info("Please upload a Breast Cancer dataset CSV file to begin analysis.")
+else:
+    st.info("Please upload a Breast Cancer dataset CSV file to begin analysis.")
