@@ -470,7 +470,6 @@ if st.session_state.df is not None:
                 st.error(f"Prediction failed: {str(e)}")
                 return None
 
-
         # ML Tab Content
         if st.session_state.df is not None:
             st.header("Machine Learning Modeling")
@@ -858,7 +857,6 @@ if st.session_state.df is not None:
         else:
             st.info("Please load and process data in the EDA section first")
     # Advanced Visualizations Section
-        # Advanced Visualizations Section
     elif st.session_state.current_tab == "📈 Advanced Visualizations":
         # Define consistent color scheme
         COLOR_SCHEME = {
