@@ -91,8 +91,7 @@ with st.sidebar:
                 st.session_state.processed = False
                 st.success(f"{file_type.upper()} file loaded successfully!")
                 st.dataframe(df)
-            else:
-                flag = True
+                flag=True
 
         except Exception as e:
             st.error(f"Error reading the file: {e}")
